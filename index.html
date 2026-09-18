@@ -1,0 +1,2972 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Manual VQA Annotator</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{
+  --ground:#F2F5FA; --surface:#FFFFFF; --surface-2:#E9EEF7; --surface-3:#F7F9FD;
+  --ink:#0C1B33; --ink-2:#45536B; --ink-3:#6B7A92;
+  --line:#D5DEEC; --line-strong:#B6C4D9;
+  --navy:#12305C; --navy-ink:#FFFFFF;
+  --accent:#1D4ED8; --accent-2:#3B82F6; --accent-soft:#E4EDFD; --on-accent:#FFFFFF;
+  --ok:#0E7C66; --ok-soft:#DCF2EC;
+  --warn:#A25708; --warn-soft:#FAEDDA;
+  --danger:#B4232A; --danger-soft:#FBE6E7;
+  --box:#EA580C; --box-fill:rgba(234,88,12,.15); --box-handle:#FFFFFF;
+  --shadow-1:0 1px 2px rgba(12,27,51,.07);
+  --shadow-2:0 1px 2px rgba(12,27,51,.06), 0 10px 26px -14px rgba(12,27,51,.30);
+  --font-ui:'Aptos','Aptos Display','Segoe UI Variable Text','Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:ui-monospace,'SF Mono','Cascadia Mono','Roboto Mono',Menlo,Consolas,monospace;
+  --r-s:5px; --r-m:8px; --r-l:12px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#080F1C; --surface:#0F1A2C; --surface-2:#18263C; --surface-3:#131F34;
+    --ink:#E9EFF9; --ink-2:#A7B6CC; --ink-3:#7B8BA5;
+    --line:#22314A; --line-strong:#36496B;
+    --navy:#0B1424; --navy-ink:#E9EFF9;
+    --accent:#6FA3FF; --accent-2:#93BBFF; --accent-soft:#16294B; --on-accent:#08121F;
+    --ok:#4FCCAC; --ok-soft:#0E332C;
+    --warn:#E9A94A; --warn-soft:#3A2A12;
+    --danger:#FF8E95; --danger-soft:#3B181C;
+    --box:#FB923C; --box-fill:rgba(251,146,60,.20); --box-handle:#0F1A2C;
+    --shadow-1:0 1px 2px rgba(0,0,0,.5);
+    --shadow-2:0 1px 2px rgba(0,0,0,.5), 0 12px 30px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#080F1C; --surface:#0F1A2C; --surface-2:#18263C; --surface-3:#131F34;
+  --ink:#E9EFF9; --ink-2:#A7B6CC; --ink-3:#7B8BA5;
+  --line:#22314A; --line-strong:#36496B;
+  --navy:#0B1424; --navy-ink:#E9EFF9;
+  --accent:#6FA3FF; --accent-2:#93BBFF; --accent-soft:#16294B; --on-accent:#08121F;
+  --ok:#4FCCAC; --ok-soft:#0E332C;
+  --warn:#E9A94A; --warn-soft:#3A2A12;
+  --danger:#FF8E95; --danger-soft:#3B181C;
+  --box:#FB923C; --box-fill:rgba(251,146,60,.20); --box-handle:#0F1A2C;
+  --shadow-1:0 1px 2px rgba(0,0,0,.5);
+  --shadow-2:0 1px 2px rgba(0,0,0,.5), 0 12px 30px -16px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box}
+body{
+  font-family:var(--font-ui); background:var(--ground); color:var(--ink);
+  font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  height:100dvh; overflow:hidden; display:flex; flex-direction:column;
+}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- top bar ---------- */
+.topbar{
+  flex:0 0 auto; display:flex; align-items:center; gap:18px;
+  height:52px; padding:0 16px; background:var(--navy); color:var(--navy-ink);
+  border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:9px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+.brand .mark{
+  width:22px;height:22px;border-radius:5px;display:grid;place-items:center;flex:0 0 auto;
+  background:linear-gradient(150deg,var(--accent-2),var(--accent));
+}
+.brand .mark svg{width:13px;height:13px;display:block}
+.tabs{display:flex;gap:2px;margin-left:4px}
+.tab{
+  background:transparent;border:0;color:color-mix(in srgb,var(--navy-ink) 68%,transparent);
+  padding:6px 12px;border-radius:var(--r-m);cursor:pointer;font-weight:500;
+}
+.tab:hover{background:color-mix(in srgb,var(--navy-ink) 10%,transparent);color:var(--navy-ink)}
+.tab[aria-selected="true"]{background:color-mix(in srgb,var(--navy-ink) 16%,transparent);color:var(--navy-ink);font-weight:600}
+.topbar .spacer{flex:1}
+.who{display:flex;align-items:center;gap:8px;font-size:12.5px;color:color-mix(in srgb,var(--navy-ink) 74%,transparent)}
+.who b{color:var(--navy-ink);font-weight:600}
+.who button{
+  background:color-mix(in srgb,var(--navy-ink) 12%,transparent);border:0;color:var(--navy-ink);
+  padding:4px 9px;border-radius:var(--r-s);cursor:pointer;font-size:12px
+}
+.who button:hover{background:color-mix(in srgb,var(--navy-ink) 22%,transparent)}
+.savepill{
+  display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;
+  padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--navy-ink) 12%,transparent);
+  color:var(--navy-ink);white-space:nowrap
+}
+.savepill .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:0 0 auto}
+.savepill[data-state="saved"] .dot{background:#5CE0BC}
+.savepill[data-state="saving"] .dot{background:#FFD166;animation:pulse 1s ease-in-out infinite}
+.savepill[data-state="offline"] .dot{background:#FF9AA2}
+@keyframes pulse{50%{opacity:.3}}
+
+/* ---------- pages ---------- */
+main{flex:1;min-height:0;position:relative}
+.page{position:absolute;inset:0;overflow:auto;display:none}
+.page[data-active="true"]{display:block}
+.page.flat{overflow:hidden}
+
+/* ---------- generic bits ---------- */
+.eyebrow{
+  font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)
+}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-l);box-shadow:var(--shadow-1)}
+.btn{
+  border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);
+  padding:7px 13px;border-radius:var(--r-m);cursor:pointer;font-weight:500;
+  display:inline-flex;align-items:center;gap:7px;white-space:nowrap
+}
+.btn:hover{background:var(--surface-2);border-color:var(--ink-3)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{background:color-mix(in srgb,var(--accent) 86%,var(--ink))}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--ink-2)}
+.btn.ghost:hover{background:var(--surface-2);color:var(--ink)}
+.btn.danger{border-color:var(--line-strong);color:var(--danger)}
+.btn.danger:hover{background:var(--danger-soft);border-color:var(--danger)}
+.btn.sm{padding:4px 9px;font-size:12.5px;border-radius:var(--r-s)}
+.chip{
+  display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;
+  padding:2px 8px;border-radius:999px;letter-spacing:.01em;white-space:nowrap
+}
+.chip.available{background:var(--surface-2);color:var(--ink-2)}
+.chip.mine{background:var(--accent-soft);color:var(--accent)}
+.chip.done{background:var(--ok-soft);color:var(--ok)}
+.chip.taken{background:var(--warn-soft);color:var(--warn)}
+.chip.skipped{background:transparent;color:var(--ink-3);border:1px dashed var(--line-strong)}
+.mono{font-family:var(--font-mono);font-size:12.5px}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* ---------- guidelines ---------- */
+.guide-wrap{max-width:1080px;margin:0 auto;padding:34px 28px 80px}
+.guide-hero{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:32px;align-items:start;margin-bottom:34px}
+.guide-hero h1{
+  font-size:33px;line-height:1.14;letter-spacing:-.025em;margin:10px 0 12px;font-weight:700;text-wrap:balance
+}
+.guide-hero p.lede{font-size:16px;color:var(--ink-2);margin:0;max-width:60ch}
+.pipeline{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-l);
+  padding:16px 16px 14px;box-shadow:var(--shadow-1)
+}
+.pipeline ol{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:0}
+.pipeline li{display:flex;gap:10px;align-items:flex-start;font-size:12.7px;color:var(--ink-2);padding:5px 0}
+.pipeline li .n{
+  flex:0 0 auto;width:19px;height:19px;border-radius:50%;display:grid;place-items:center;
+  background:var(--accent-soft);color:var(--accent);font-size:10.5px;font-weight:700;margin-top:1px
+}
+.pipeline li b{color:var(--ink);font-weight:600}
+.pipeline li .rail{flex:0 0 auto;width:19px;display:flex;justify-content:center}
+.pipeline li .rail i{display:block;width:1px;height:100%;background:var(--line)}
+
+.guide-sec{margin:0 0 30px}
+.guide-sec > h2{
+  font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);
+  margin:0 0 12px;padding-bottom:9px;border-bottom:1px solid var(--line)
+}
+.guide-sec h3{font-size:15.5px;font-weight:600;margin:20px 0 8px;letter-spacing:-.01em}
+.guide-sec h3:first-of-type{margin-top:0}
+.guide-sec p{margin:0 0 10px;color:var(--ink-2);max-width:72ch}
+.guide-sec ul{margin:0 0 12px;padding-left:19px;color:var(--ink-2);max-width:72ch}
+.guide-sec li{margin:3px 0}
+.guide-sec strong{color:var(--ink);font-weight:600}
+
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:4px 0 6px}
+.rule{border-radius:var(--r-l);padding:14px 16px;border:1px solid var(--line);background:var(--surface)}
+.rule.must{border-left:3px solid var(--ok)}
+.rule.never{border-left:3px solid var(--danger)}
+.rule h4{margin:0 0 8px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px;letter-spacing:.01em}
+.rule.must h4{color:var(--ok)}
+.rule.never h4{color:var(--danger)}
+.rule ul{margin:0;padding-left:17px;font-size:13px;color:var(--ink-2)}
+.rule ul li{margin:4px 0}
+
+.exbox{border:1px solid var(--line);border-radius:var(--r-l);overflow:hidden;background:var(--surface);margin:10px 0 0}
+.exrow{display:grid;grid-template-columns:78px minmax(0,1fr);gap:0;border-top:1px solid var(--line)}
+.exrow:first-child{border-top:0}
+.exrow .verdict{
+  padding:11px 12px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  display:flex;align-items:flex-start;gap:5px
+}
+.exrow.good .verdict{background:var(--ok-soft);color:var(--ok)}
+.exrow.bad .verdict{background:var(--danger-soft);color:var(--danger)}
+.exrow .body{padding:11px 14px;min-width:0}
+.exrow .body q{display:block;font-size:13.5px;color:var(--ink);quotes:'"' '"'}
+.exrow .body .why{display:block;margin-top:5px;font-size:12.3px;color:var(--ink-3)}
+.exrow .body .why b{color:var(--ink-2);font-weight:600}
+
+.jsonblock{
+  background:var(--surface-3);border:1px solid var(--line);border-radius:var(--r-l);
+  padding:14px 16px;overflow-x:auto;font-family:var(--font-mono);font-size:12.2px;line-height:1.65;
+  color:var(--ink-2);white-space:pre;margin:8px 0 0
+}
+.jsonblock .k{color:var(--accent)}
+.jsonblock .s{color:var(--ok)}
+.jsonblock .n{color:var(--box)}
+
+.fieldtable{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+.fieldtable th{
+  text-align:left;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);
+  font-weight:600;padding:0 10px 7px 0;border-bottom:1px solid var(--line)
+}
+.fieldtable td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);color:var(--ink-2);vertical-align:top}
+.fieldtable td:first-child{white-space:nowrap;color:var(--ink);font-family:var(--font-mono);font-size:12.3px}
+
+/* ---------- annotate ---------- */
+.annot{display:grid;grid-template-columns:250px minmax(0,1fr) 404px;height:100%;position:relative}
+/* explicit tracks: taking the rail out of flow must never shift the stage or the form */
+.annot > .rail{grid-column:1}
+.annot > .stage{grid-column:2}
+.annot > .form{grid-column:3}
+.annot[data-rail="off"]{grid-template-columns:0 minmax(0,1fr) 404px}
+.annot[data-rail="off"] > .rail{display:none}
+.railscrim{display:none}
+
+.rail{border-right:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;min-height:0}
+.rail-head{padding:12px 13px 10px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:9px}
+.progress-line{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.progress-line .big{font-size:21px;font-weight:700;letter-spacing:-.02em}
+.progress-line .of{font-size:12.5px;color:var(--ink-3)}
+.rail-head .of{font-size:11.5px;color:var(--ink-3)}
+.rail-head .of.capped{color:var(--warn);font-weight:600}
+
+.slots{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.slots .slotbtn{
+  border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-2);
+  padding:4px 11px;border-radius:999px;cursor:pointer;font-size:12.2px;font-weight:600;
+  display:inline-flex;align-items:center;gap:6px
+}
+.slots .slotbtn:hover{background:var(--surface-2);color:var(--ink)}
+.slots .slotbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.slots .slotbtn .st{width:6px;height:6px;border-radius:50%;background:var(--line-strong)}
+.slots .slotbtn[data-state="draft"] .st{background:var(--warn)}
+.slots .slotbtn[data-state="done"] .st{background:var(--ok)}
+.slots .slotbtn[aria-pressed="true"] .st{background:currentColor}
+.slots .add{border-style:dashed;color:var(--ink-3)}
+.slots .lbl{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin-right:2px}
+.bar{height:5px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.bar > i{display:block;height:100%;background:var(--ok);border-radius:99px;transition:width .25s ease}
+.filters{display:flex;gap:3px;flex-wrap:wrap}
+.filters button{
+  border:1px solid transparent;background:transparent;color:var(--ink-3);
+  font-size:11px;font-weight:600;padding:3px 6px;border-radius:var(--r-s);cursor:pointer
+}
+.filters button:hover{background:var(--surface-2);color:var(--ink-2)}
+.filters button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.rail-list{flex:1;overflow:auto;padding:6px}
+.itemrow{
+  display:flex;gap:8px;align-items:center;
+  width:100%;text-align:left;border:1px solid transparent;background:transparent;
+  padding:6px 8px;border-radius:var(--r-m);cursor:pointer
+}
+.itemrow .idx{flex:0 0 26px}
+.itemrow .nm{flex:1 1 auto;min-width:0}
+.itemrow:hover{background:var(--surface-2)}
+.itemrow[aria-current="true"]{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 35%,transparent)}
+.itemrow .idx{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.itemrow .nm{min-width:0}
+.itemrow .nm .t{
+  font-size:12.4px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)
+}
+.itemrow .nm .b{font-size:11px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dotstate{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.dotstate.available{background:var(--line-strong)}
+.dotstate.mine{background:var(--accent)}
+.dotstate.done{background:var(--ok)}
+.dotstate.taken{background:var(--warn);opacity:.6}
+.dotstate.skipped{background:transparent;border:1.5px dashed var(--line-strong)}
+
+/* min-height:0 is load-bearing: without it the default min-height:auto lets the canvas area
+   grow past the window instead of scrolling, and a zoomed page loses its lower half. */
+.stage{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--ground)}
+.stage-bar{
+  flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 12px;
+  border-bottom:1px solid var(--line);background:var(--surface);flex-wrap:wrap
+}
+.stage-bar .meta{display:flex;flex-direction:column;min-width:0;margin-right:auto}
+.stage-bar .meta .f{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:44ch}
+.stage-bar .meta .s{font-size:11.5px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60ch}
+.zoomgrp{display:flex;align-items:center;border:1px solid var(--line-strong);border-radius:var(--r-m);overflow:hidden}
+.zoomgrp button{border:0;background:var(--surface);padding:5px 9px;cursor:pointer;color:var(--ink-2);font-weight:600}
+.zoomgrp button:hover:not(:disabled){background:var(--surface-2);color:var(--ink)}
+.zoomgrp button:disabled{opacity:.35;cursor:not-allowed}
+.zoomgrp .lvl{padding:5px 8px;font-size:12px;color:var(--ink-3);min-width:48px;text-align:center;font-variant-numeric:tabular-nums;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+/* margin:auto centres the page, NOT justify-content — centring a flex item larger than its
+   container clips the overflow at the start edge, putting the top-left of a zoomed page
+   permanently out of reach. */
+.canvas-wrap{flex:1;min-height:0;overflow:auto;padding:18px;display:flex}
+.canvas{position:relative;flex:0 0 auto;margin:auto;box-shadow:var(--shadow-2);background:#fff;border-radius:2px}
+.canvas img{display:block;width:100%;height:100%;border-radius:2px}
+.overlay{position:absolute;inset:0;cursor:crosshair;touch-action:none}
+.overlay.pan{cursor:grab}
+.overlay.panning{cursor:grabbing}
+.zoomgrp button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.bbox{position:absolute;border:2px solid var(--box);background:var(--box-fill);cursor:move}
+.bbox .h{
+  position:absolute;width:11px;height:11px;background:var(--box-handle);border:2px solid var(--box);border-radius:2px
+}
+.bbox .h.nw{left:-6px;top:-6px;cursor:nwse-resize}
+.bbox .h.ne{right:-6px;top:-6px;cursor:nesw-resize}
+.bbox .h.sw{left:-6px;bottom:-6px;cursor:nesw-resize}
+.bbox .h.se{right:-6px;bottom:-6px;cursor:nwse-resize}
+.bbox .tag{
+  position:absolute;left:-2px;top:-21px;background:var(--box);color:#fff;font-size:10px;font-weight:700;
+  padding:1px 5px;border-radius:3px;letter-spacing:.05em;white-space:nowrap
+}
+.placeholder{
+  display:grid;place-items:center;text-align:center;padding:40px;gap:10px;color:var(--ink-3);
+  border:1.5px dashed var(--line-strong);border-radius:var(--r-l);background:var(--surface);
+  width:min(560px,100%);margin-top:6vh
+}
+.placeholder h3{margin:0;font-size:15px;color:var(--ink);font-weight:600}
+.placeholder p{margin:0;max-width:46ch;font-size:13px}
+
+.form{border-left:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;min-height:0}
+.form-scroll{flex:1;overflow:auto;padding:14px 16px 18px;display:flex;flex-direction:column;gap:14px}
+.field label{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:5px}
+.field label .lb{font-size:12px;font-weight:600;letter-spacing:.02em}
+.field label .hint{font-size:11px;color:var(--ink-3);font-weight:400}
+.field textarea,.field input[type="text"]{
+  width:100%;background:var(--surface-3);border:1px solid var(--line);border-radius:var(--r-m);
+  padding:8px 10px;font-size:13.2px;line-height:1.5;resize:vertical;color:var(--ink)
+}
+.field textarea:focus,.field input:focus{outline:none;border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px var(--accent-soft)}
+.field textarea::placeholder,.field input::placeholder{color:var(--ink-3);opacity:.75}
+
+.bboxreadout{
+  display:flex;align-items:center;gap:8px;background:var(--surface-3);border:1px solid var(--line);
+  border-radius:var(--r-m);padding:7px 10px;font-family:var(--font-mono);font-size:12px;color:var(--ink-2)
+}
+.bboxreadout .vals{flex:1;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bboxreadout.empty{color:var(--ink-3);border-style:dashed}
+
+details.ref{border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface-3);overflow:hidden}
+details.ref > summary{
+  cursor:pointer;list-style:none;padding:9px 12px;display:flex;align-items:center;gap:8px;
+  font-size:12.3px;font-weight:600;color:var(--ink-2)
+}
+details.ref > summary::-webkit-details-marker{display:none}
+details.ref > summary .caret{transition:transform .18s ease;color:var(--ink-3);flex:0 0 auto}
+details.ref[open] > summary .caret{transform:rotate(90deg)}
+details.ref > summary:hover{background:var(--surface-2)}
+details.ref > summary .grow{flex:1}
+.refbody{padding:2px 12px 12px;display:flex;flex-direction:column;gap:9px;border-top:1px solid var(--line)}
+.refbody .rf{display:flex;flex-direction:column;gap:2px}
+.refbody .rf .rk{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.refbody .rf .rv{font-size:12.6px;color:var(--ink-2)}
+
+.spanlist{display:flex;flex-direction:column;gap:9px}
+.spancard{
+  border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);
+  padding:10px 11px;display:flex;flex-direction:column;gap:7px
+}
+.spancard .sp{
+  font-size:12.7px;color:var(--ink);line-height:1.55;
+  border-left:2px solid var(--box);padding-left:9px
+}
+.spancard .sp mark{background:var(--box-fill);color:var(--ink);border-radius:2px;padding:0 3px;font-weight:600}
+.spancard .tags{display:flex;flex-wrap:wrap;gap:5px;align-items:baseline}
+.spancard .obj{font-size:11.8px;color:var(--ink-2)}
+.spancard .obj b{
+  color:var(--ink-3);font-weight:700;font-size:10px;letter-spacing:.07em;text-transform:uppercase;margin-right:5px
+}
+.spancard .why{font-size:11.7px;color:var(--ink-3);line-height:1.55}
+.chip.type{background:var(--accent-soft);color:var(--accent);text-transform:lowercase}
+.chip.conf-high{background:var(--ok-soft);color:var(--ok)}
+.chip.conf-medium{background:var(--warn-soft);color:var(--warn)}
+.chip.conf-low{background:var(--surface-2);color:var(--ink-3)}
+
+.checklist{display:flex;flex-direction:column;gap:5px;background:var(--surface-3);border:1px solid var(--line);border-radius:var(--r-l);padding:10px 12px}
+.checklist .ci{display:flex;align-items:center;gap:8px;font-size:12.2px;color:var(--ink-3)}
+.checklist .ci .mk{
+  width:15px;height:15px;border-radius:50%;border:1.5px solid var(--line-strong);flex:0 0 auto;
+  display:grid;place-items:center;font-size:9px;color:transparent
+}
+.checklist .ci[data-ok="true"]{color:var(--ink-2)}
+.checklist .ci[data-ok="true"] .mk{background:var(--ok);border-color:var(--ok);color:#fff}
+.checklist .ci[data-warn="true"]{color:var(--warn)}
+.checklist .ci[data-warn="true"] .mk{border-color:var(--warn);border-style:dashed}
+
+/* two rows, and every row wraps: four buttons never fit one 400px line, and a button pushed
+   past the panel edge is unreachable rather than merely ugly */
+.form-foot{
+  flex:0 0 auto;border-top:1px solid var(--line);padding:10px 14px;display:flex;flex-direction:column;
+  gap:8px;background:var(--surface)
+}
+.foot-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.foot-row .btn{min-width:0}
+.foot-row.main .btn{flex:1 1 120px;justify-content:center}
+.notice{
+  padding:8px 11px;border-radius:var(--r-m);font-size:12.4px;display:flex;gap:8px;align-items:flex-start
+}
+.notice.warn{background:var(--warn-soft);color:var(--warn)}
+.notice.info{background:var(--accent-soft);color:var(--accent)}
+.notice.err{background:var(--danger-soft);color:var(--danger)}
+
+/* ---------- admin ---------- */
+.admin-wrap{max-width:1180px;margin:0 auto;padding:26px 24px 80px;display:flex;flex-direction:column;gap:22px}
+.admin-head h1{font-size:24px;margin:4px 0 4px;letter-spacing:-.02em;font-weight:700}
+.admin-head p{margin:0;color:var(--ink-2);max-width:70ch}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-l);padding:13px 15px}
+.tile .k{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.tile .v{font-size:26px;font-weight:700;letter-spacing:-.025em;margin-top:3px;font-variant-numeric:tabular-nums}
+.tile .sub{font-size:11.8px;color:var(--ink-3);margin-top:1px}
+.tile.hi .v{color:var(--ok)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-l);overflow:hidden}
+.panel > header{
+  padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap
+}
+.panel > header h2{margin:0;font-size:14.5px;font-weight:600;letter-spacing:-.01em}
+.panel > header p{margin:0;font-size:12.3px;color:var(--ink-3);flex:1 1 240px}
+.panel .body{padding:14px 16px}
+.dropzone{
+  border:1.5px dashed var(--line-strong);border-radius:var(--r-l);padding:22px;text-align:center;
+  background:var(--surface-3);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px
+}
+.dropzone:hover,.dropzone.over{border-color:var(--accent);background:var(--accent-soft)}
+.dropzone .t{font-size:13.5px;font-weight:600}
+.dropzone .s{font-size:12.3px;color:var(--ink-3)}
+table.grid{width:100%;border-collapse:collapse;font-size:13px}
+table.grid th{
+  text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);
+  font-weight:600;padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap
+}
+table.grid td{padding:9px 12px;border-bottom:1px solid var(--line);color:var(--ink-2)}
+table.grid tr:last-child td{border-bottom:0}
+table.grid td.num{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+table.grid td.name{color:var(--ink);font-weight:500}
+.empty-note{padding:22px;text-align:center;color:var(--ink-3);font-size:13px}
+.setting{display:flex;flex-direction:column;gap:4px;max-width:200px}
+.setting label{font-size:12px;font-weight:600}
+.setting input[type="number"]{
+  width:110px;background:var(--surface-3);border:1px solid var(--line);border-radius:var(--r-m);
+  padding:7px 9px;font-variant-numeric:tabular-nums
+}
+.setting input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.setting .help{font-size:11.4px;color:var(--ink-3);line-height:1.45}
+
+/* ---------- sign-in ---------- */
+.scrim{
+  position:fixed;inset:0;background:color-mix(in srgb,var(--navy) 55%,transparent);
+  backdrop-filter:blur(3px);display:grid;place-items:center;z-index:50;padding:20px
+}
+.signin{
+  width:min(420px,100%);background:var(--surface);border:1px solid var(--line);border-radius:16px;
+  padding:24px;box-shadow:var(--shadow-2);display:flex;flex-direction:column;gap:14px
+}
+.signin h2{margin:0;font-size:19px;letter-spacing:-.02em;font-weight:700}
+.signin p{margin:0;font-size:13px;color:var(--ink-2)}
+.signin input{
+  width:100%;background:var(--surface-3);border:1px solid var(--line);border-radius:var(--r-m);padding:9px 11px;font-size:14px
+}
+.signin input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.signin .row{display:flex;flex-direction:column;gap:5px}
+.signin .row label{font-size:12px;font-weight:600}
+
+/* centred at the bottom, clear of the page list on the left and every control on the right */
+.toast-host{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:18px;
+  display:flex;flex-direction:column;align-items:center;gap:8px;z-index:60;pointer-events:none
+}
+.toast{
+  background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:var(--r-m);padding:10px 14px;box-shadow:var(--shadow-2);font-size:13px;max-width:340px
+}
+.toast.ok{border-left-color:var(--ok)}
+.toast.err{border-left-color:var(--danger)}
+
+/* narrow: the page list becomes a drawer over the stage, never a collapsed column */
+@media (max-width:1240px){
+  .annot,.annot[data-rail="off"]{grid-template-columns:0 minmax(0,1fr) 372px}
+  .annot[data-rail="on"] > .rail{
+    position:absolute;left:0;top:0;bottom:0;width:272px;z-index:22;box-shadow:var(--shadow-2)
+  }
+  .annot[data-rail="on"] > .railscrim{
+    display:block;position:absolute;inset:0;z-index:21;background:color-mix(in srgb,var(--navy) 28%,transparent);border:0
+  }
+  .guide-hero{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:900px){
+  body{overflow:auto;height:auto;min-height:100dvh}
+  main{position:static}
+  .page{position:static;display:none}
+  .page[data-active="true"]{display:block}
+  .annot,.annot[data-rail="off"],.annot[data-rail="on"]{grid-template-columns:minmax(0,1fr);height:auto}
+  .annot > .rail,.annot > .stage,.annot > .form{grid-column:1}
+  .annot[data-rail="on"] > .rail{position:static;width:auto;box-shadow:none;border-right:0;border-bottom:1px solid var(--line);max-height:44vh}
+  .annot[data-rail="on"] > .railscrim{display:none}
+  .form{border-left:0;border-top:1px solid var(--line)}
+  .canvas-wrap{padding:12px;min-height:52vh}
+}
+</style>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="M8 12h8M12 8v8"></path>
+      </svg>
+    </span>
+    <span>Manual VQA Annotator</span>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-goto="guide" aria-selected="true">Guidelines</button>
+    <button class="tab" role="tab" data-goto="annotate" aria-selected="false">Annotate</button>
+    <button class="tab" role="tab" data-goto="admin" id="adminTab" aria-selected="false">Admin</button>
+  </nav>
+  <div class="spacer"></div>
+  <span class="savepill" id="savePill" data-state="idle"><span class="dot"></span><span id="savePillText">Not signed in</span></span>
+  <div class="who" id="whoBox" hidden><span id="whoName"></span><button type="button" id="switchUser">Switch</button></div>
+  <div class="who" id="signedOutBox"><button type="button" id="signInBtn">Sign in</button></div>
+</header>
+
+<main>
+  <!-- ============ GUIDELINES ============ -->
+  <section class="page" id="page-guide" data-active="true">
+    <div class="guide-wrap">
+
+      <div class="guide-hero">
+        <div>
+          <span class="eyebrow">Manual VQA dataset</span>
+          <h1>Annotation Guidelines</h1>
+          <p class="lede">100 candidate pages &rarr; select the suitable pages &rarr; create up to 2 annotations per page &rarr; 50 QA examples per annotator.</p>
+        </div>
+        <div class="pipeline">
+          <span class="eyebrow">The question should require this process</span>
+          <ol>
+            <li><span class="n">1</span><span><b>Brand &amp; model</b> &rarr; find the relevant manual</span></li>
+            <li><span class="n">2</span><span><b>Visual description</b> &rarr; find the relevant page</span></li>
+            <li><span class="n">3</span><span><b>Identify the target visually</b></span></li>
+            <li><span class="n">4</span><span><b>Read the associated text</b> &rarr; answer</span></li>
+          </ol>
+        </div>
+      </div>
+
+      <section class="guide-sec">
+        <h2>Task</h2>
+        <ul>
+          <li><strong>Query:</strong> Textual user query</li>
+          <li><strong>Database:</strong> Manual PDF page images from multiple brands and products</li>
+          <li><strong>Goal:</strong> Retrieve the relevant manual page and answer the query using both visual and textual information</li>
+        </ul>
+      </section>
+
+      <section class="guide-sec">
+        <h2>Dataset Characteristics</h2>
+        <ul>
+          <li>The question must include the product's brand name and model name so that the correct manual can be retrieved from the full database.</li>
+          <li>Other than the brand and model name, the question must refer only to visual information, such as:
+            <ul>
+              <li>appearance or shape</li>
+              <li>color</li>
+              <li>icon appearance</li>
+              <li>button or component position</li>
+              <li>spatial relationship to surrounding elements</li>
+            </ul>
+          </li>
+          <li>The question must not mention text shown on the target page, including:
+            <ul>
+              <li>component or button names</li>
+              <li>labels</li>
+              <li>menu names</li>
+              <li>function names</li>
+              <li>other textual descriptions that could directly identify the target</li>
+            </ul>
+          </li>
+          <li>The question should therefore require the following process:<br>
+            brand &amp; model &rarr; find the relevant manual &rarr; visual description &rarr; find the relevant page &rarr; identify the target visually &rarr; read the associated text &rarr; answer</li>
+          <li>Each manual page is provided with a reference example containing:
+            <ul>
+              <li>Question</li>
+              <li>Answer</li>
+              <li>Text evidence</li>
+              <li>Image evidence</li>
+              <li>Bounding box for the image evidence</li>
+            </ul>
+          </li>
+          <li>Annotators may use these examples as references when creating their own annotations.</li>
+        </ul>
+      </section>
+
+      <section class="guide-sec">
+        <h2>Annotation Procedure</h2>
+        <ul>
+          <li>Each annotator is given 100 manual page images and their corresponding reference examples.</li>
+          <li>Review the 100 pages and select the pages most suitable for this task.</li>
+          <li>For each selected page, create <strong>one or two QA examples &mdash; at most two per page</strong>. A second QA on the same page must target a different visual element, with its own answer, evidence and bounding box.</li>
+          <li>For each example, annotate:
+            <ul>
+              <li>Question</li>
+              <li>Answer</li>
+              <li>Text evidence</li>
+              <li>Image evidence</li>
+              <li>Bounding box around the image evidence</li>
+            </ul>
+          </li>
+          <li>The bounding box should cover only the specific visual element referred to in the question, not the entire figure or page.</li>
+        </ul>
+      </section>
+
+      <section class="guide-sec">
+        <h2>Final Output</h2>
+        <p>100 candidate pages &rarr; select the suitable pages &rarr; create up to 2 annotations per page &rarr; <strong>50 QA examples per annotator</strong>.</p>
+      </section>
+
+      <section class="guide-sec">
+        <h2>Using this tool</h2>
+        <p style="font-size:12.7px;color:var(--ink-3);margin-bottom:12px">How the software works. This is not part of the annotation specification above.</p>
+        <ul>
+          <li>Open <strong>Annotate</strong>, sign in with your name and email, and load the image ZIP you downloaded from the Drive link. The images stay in your browser and are never uploaded.</li>
+          <li>Pick a page from the list on the left. Press <strong>Not suitable</strong> on a page you are not selecting &mdash; it leaves your list and stays open to other annotators.</li>
+          <li>A page becomes yours as soon as you start typing, and no one else can take it after that.</li>
+          <li>A page can carry up to two QA. Once the first has any text in it, <strong>+ Add QA 2</strong> appears above the form and next to <em>Not suitable</em> at the bottom &mdash; press either to write the second question for the same page. The pills above the form switch between QA 1 and QA 2, and each is saved, completed and deleted on its own. The sidebar counts <strong>QA</strong>, not pages.</li>
+          <li>Drag on the image to draw the bounding box; drag its corners to resize, drag inside it to move. It is stored as <span class="mono">normalized_0_1000_xyxy</span>.</li>
+          <li>Zoom with &minus; and + in the toolbar, or <strong>Fit</strong> to see the whole page. When the page is larger than the window, switch to the <strong>Pan</strong> tool &mdash; or just hold <strong>Space</strong> &mdash; and drag to move around it. <span class="mono">B</span> and <span class="mono">H</span> switch between Box and Pan.</li>
+          <li>Press <strong>Mark complete</strong> (or &#8984;/Ctrl + Enter) when the page is done. The sidebar counter tracks your completed pages.</li>
+          <li>Everything is saved as you type. If your connection drops or you close the tab, sign back in with the same email &mdash; your annotations return exactly as you left them, and only the image ZIP needs reloading.</li>
+        </ul>
+      </section>
+
+    </div>
+  </section>
+
+  <!-- ============ ANNOTATE ============ -->
+  <section class="page flat" id="page-annotate">
+    <div class="annot" id="annotShell" data-rail="on">
+
+      <aside class="rail">
+        <div class="rail-head">
+          <div class="progress-line">
+            <span><span class="big tnum" id="progDone">0</span><span class="of" id="progOf"> / 50 QA completed</span></span>
+            <span class="of tnum" id="progPct">0%</span>
+          </div>
+          <div class="bar"><i id="progBar" style="width:0%"></i></div>
+          <span class="of tnum" id="progPages">0 pages in progress</span>
+          <div class="filters" id="filters">
+            <button type="button" data-filter="all" aria-pressed="true">All</button>
+            <button type="button" data-filter="available" aria-pressed="false">Open</button>
+            <button type="button" data-filter="mine" aria-pressed="false">Mine</button>
+            <button type="button" data-filter="done" aria-pressed="false">Done</button>
+            <button type="button" data-filter="skipped" aria-pressed="false">Skipped</button>
+          </div>
+        </div>
+        <div class="rail-list" id="railList"></div>
+      </aside>
+      <button class="railscrim" id="railScrim" type="button" aria-label="Close the page list"></button>
+
+      <div class="stage">
+        <div class="stage-bar">
+          <button class="btn ghost sm" type="button" id="railToggle" title="Show or hide the page list">&#9776;&nbsp;Pages</button>
+          <div class="zoomgrp" style="margin-right:2px">
+            <button type="button" id="prevPage" title="Previous page">&#8249;</button>
+            <span class="lvl" id="posLbl" style="min-width:62px">&mdash;</span>
+            <button type="button" id="nextPage" title="Next page">&#8250;</button>
+          </div>
+          <div class="meta">
+            <span class="f" id="stageFile">No page selected</span>
+            <span class="s" id="stageSource">Load your image ZIP to begin</span>
+          </div>
+          <button class="btn sm" type="button" id="loadZipBtn">Load image ZIP</button>
+          <button class="btn sm ghost" type="button" id="loadFilesBtn">or pick files</button>
+          <span class="chip available" id="imgCount">0 images</span>
+          <div class="zoomgrp" id="toolGrp">
+            <button type="button" id="toolBox" aria-pressed="true" title="Draw the bounding box — shortcut B">&#9645; Box</button>
+            <button type="button" id="toolPan" aria-pressed="false" title="Drag to move around the page — shortcut H, or hold Space" style="border-left:1px solid var(--line)">&#10021; Pan</button>
+          </div>
+          <div class="zoomgrp">
+            <button type="button" id="zoomOut" title="Zoom out">&minus;</button>
+            <span class="lvl" id="zoomLvl">Fit</span>
+            <button type="button" id="zoomIn" title="Zoom in">+</button>
+            <button type="button" id="zoomFit" title="Fit to window" style="border-left:1px solid var(--line)">Fit</button>
+          </div>
+          <input type="file" id="zipInput" accept=".zip,application/zip" hidden>
+          <input type="file" id="filesInput" accept="image/*" multiple hidden>
+        </div>
+        <div class="canvas-wrap" id="canvasWrap">
+          <div class="placeholder" id="stagePlaceholder">
+            <h3>Nothing loaded yet</h3>
+            <p>Sign in, then load the image ZIP you downloaded from Drive. The pages appear in the list on the left.</p>
+          </div>
+          <div class="canvas" id="canvas" hidden>
+            <div id="canvasMedia"></div>
+            <div class="overlay" id="overlay"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form">
+        <div class="form-scroll" id="formScroll">
+          <div id="formEmpty">
+            <div class="notice info">
+              <span aria-hidden="true">&#9432;</span>
+              <span>Select a page from the list to start annotating.</span>
+            </div>
+            <div class="pipeline" style="margin-top:14px">
+              <span class="eyebrow">How a page moves through</span>
+              <ol>
+                <li><span class="n">1</span><span>Open a page and judge whether it <b>suits the task</b></span></li>
+                <li><span class="n">2</span><span>If not, press <b>Not suitable</b> &mdash; it returns to the pool</span></li>
+                <li><span class="n">3</span><span>If it does, start typing &mdash; the page becomes <b>yours</b></span></li>
+                <li><span class="n">4</span><span>Drag a box on the image around the target element</span></li>
+                <li><span class="n">5</span><span><b>Mark complete</b> when all six checks are green</span></li>
+              </ol>
+              <p style="margin:12px 0 0;font-size:12.3px;color:var(--ink-3);line-height:1.55">Everything you type is saved as you go. Close the tab, lose your connection, switch machines &mdash; sign back in with the same email and your work is here.</p>
+            </div>
+          </div>
+
+          <div id="formBody" hidden>
+            <div id="claimNotice"></div>
+            <div class="slots" id="slotBar"></div>
+
+            <details class="ref" id="refBlock">
+              <summary>
+                <span class="caret" aria-hidden="true">&#9656;</span>
+                <span class="grow">Reference example for this page</span>
+                <span class="chip available">read-only</span>
+              </summary>
+              <div class="refbody" id="refBody"></div>
+            </details>
+
+            <details class="ref" id="spanBlock" style="margin-top:10px" hidden>
+              <summary>
+                <span class="caret" aria-hidden="true">&#9656;</span>
+                <span class="grow">Text spans on this page that need visual information</span>
+                <span class="chip available" id="spanCount">0</span>
+              </summary>
+              <div class="refbody" id="spanBody"></div>
+            </details>
+
+            <div class="field" style="margin-top:14px">
+              <label for="fQuestion"><span class="lb">Question</span><span class="hint" id="qHint">brand + model, visual cues only</span></label>
+              <textarea id="fQuestion" rows="4" placeholder="What is the purpose of the &hellip; on the &lt;brand&gt; &lt;model&gt;?"></textarea>
+            </div>
+
+            <div class="field" style="margin-top:14px">
+              <label for="fAnswer"><span class="lb">Answer</span><span class="hint">short, from the page text</span></label>
+              <textarea id="fAnswer" rows="2" placeholder="It functions as &hellip;"></textarea>
+            </div>
+
+            <div class="field" style="margin-top:14px">
+              <label for="fEvidenceText"><span class="lb">Text evidence</span><span class="hint">copied from the page</span></label>
+              <textarea id="fEvidenceText" rows="2" placeholder="The span on the page that supports the answer"></textarea>
+            </div>
+
+            <div class="field" style="margin-top:14px">
+              <label for="fImageDesc"><span class="lb">Image evidence</span><span class="hint">describe it without naming it</span></label>
+              <textarea id="fImageDesc" rows="3" placeholder="the rectangular button with a windshield shape and three wavy arrows pointing up"></textarea>
+            </div>
+
+            <div class="field" style="margin-top:14px">
+              <label><span class="lb">Bounding box</span><span class="hint">drag on the page &middot; normalized 0&ndash;1000 xyxy</span></label>
+              <div class="bboxreadout empty" id="bboxReadout">
+                <span class="vals" id="bboxVals">no box &mdash; drag on the image</span>
+                <button class="btn sm ghost" type="button" id="clearBox" hidden>Clear</button>
+              </div>
+            </div>
+
+            <div class="checklist" style="margin-top:14px" id="checklist">
+              <div class="ci" data-key="brand"><span class="mk">&#10003;</span><span>Question names the brand and model</span></div>
+              <div class="ci" data-key="question"><span class="mk">&#10003;</span><span>Question written</span></div>
+              <div class="ci" data-key="answer"><span class="mk">&#10003;</span><span>Answer written</span></div>
+              <div class="ci" data-key="evtext"><span class="mk">&#10003;</span><span>Text evidence copied</span></div>
+              <div class="ci" data-key="imgdesc"><span class="mk">&#10003;</span><span>Image evidence described</span></div>
+              <div class="ci" data-key="bbox"><span class="mk">&#10003;</span><span>Bounding box drawn</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="form-foot" id="formFoot" hidden>
+          <div class="foot-row">
+            <button class="btn sm" type="button" id="skipBtn">Not suitable</button>
+            <button class="btn sm" type="button" id="addQaBtn" hidden>+ Add QA</button>
+            <button class="btn danger sm" type="button" id="releaseBtn" hidden>Delete my annotation</button>
+          </div>
+          <div class="foot-row main">
+            <button class="btn" type="button" id="nextBtn">Next open page</button>
+            <button class="btn primary" type="button" id="completeBtn">Mark complete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ADMIN ============ -->
+  <section class="page" id="page-admin">
+    <div class="admin-wrap">
+      <div class="admin-head">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <div style="flex:1">
+            <span class="eyebrow">Study administration</span>
+            <h1>Dataset, progress, and export</h1>
+          </div>
+          <button class="btn sm" type="button" id="adminLock" style="margin-top:6px">Lock console</button>
+        </div>
+        <p>Upload the full reference JSON once. Annotators claim pages from it first-come, first-served; their work is written back here as they type.</p>
+        <div class="notice info" style="margin-top:12px;max-width:78ch">
+          <span aria-hidden="true">&#9432;</span>
+          <span>The passcode is checked by the server, not by this page, and the same key has to accompany every dataset upload, setting change and reset &mdash; so annotators who open this tab cannot change anything even with the file in front of them. Their own annotations save without it. Every completed QA also lands in your Google Sheet the moment it is marked complete.</span>
+        </div>
+      </div>
+
+      <div class="tiles" id="adminTiles"></div>
+
+      <section class="panel">
+        <header>
+          <h2>Reference dataset</h2>
+          <p>A JSON array of reference examples. Each object needs <span class="mono">query_id</span> and <span class="mono">gt_image</span>; <span class="mono">brand</span>, <span class="mono">source</span>, <span class="mono">query</span>, <span class="mono">answer</span> and <span class="mono">evidence</span> are shown to annotators.</p>
+        </header>
+        <div class="body" style="border-bottom:1px solid var(--line);display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end">
+          <div class="setting">
+            <label for="targetInput">QA target per annotator</label>
+            <input type="number" id="targetInput" min="1" max="5000" value="50">
+            <span class="help">How many finished QA each annotator should produce.</span>
+          </div>
+          <div class="setting">
+            <label for="pagesCapInput">Pages per annotator</label>
+            <input type="number" id="pagesCapInput" min="0" max="5000" placeholder="no limit">
+            <span class="help">How many pages one annotator may hold. Blank means no limit.</span>
+          </div>
+          <div class="setting">
+            <label for="maxPerPageInput">Max QA per page</label>
+            <input type="number" id="maxPerPageInput" min="1" max="5" value="2">
+            <span class="help">Annotators may write this many questions on one page.</span>
+          </div>
+          <button class="btn primary" type="button" id="saveTarget" style="margin-bottom:16px">Save settings</button>
+        </div>
+        <div class="body" style="display:flex;flex-direction:column;gap:12px">
+          <div class="dropzone" id="jsonDrop" tabindex="0" role="button">
+            <span class="t">Drop the reference JSON here, or click to choose a file</span>
+            <span class="s">Uploading a new file starts a fresh round &mdash; existing annotations stay attached to the round they were made in.</span>
+          </div>
+          <input type="file" id="jsonInput" accept=".json,application/json" hidden>
+          <div id="datasetStatus"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <header>
+          <h2>Annotator progress</h2>
+          <p>Live &mdash; updates as annotators work. <strong>JSON</strong> downloads that person's completed QA; <strong>+ drafts</strong> includes their unfinished ones.</p>
+        </header>
+        <div id="annotTableHost"><div class="empty-note">No annotators have signed in yet.</div></div>
+      </section>
+
+      <section class="panel">
+        <header>
+          <h2>Export everyone</h2>
+          <p>Same schema as the reference JSON, with <span class="mono">annotator</span>, <span class="mono">qa_index</span> and <span class="mono">source_query_id</span> added. For one person at a time, use the <strong>Export</strong> column in the table above.</p>
+        </header>
+        <div class="body" style="display:flex;gap:9px;flex-wrap:wrap;align-items:center">
+          <button class="btn primary" type="button" id="exportDone">Export completed (JSON)</button>
+          <button class="btn" type="button" id="exportAll">Export everything, including drafts</button>
+          <button class="btn ghost" type="button" id="exportCsv">Export summary (CSV)</button>
+          <span class="mono" id="exportHint" style="color:var(--ink-3)"></span>
+        </div>
+      </section>
+
+      <section class="panel" style="border-color:var(--line-strong)">
+        <header>
+          <h2>Reset</h2>
+          <p>Republishing the page never touches stored data &mdash; that is what keeps annotators' work safe across updates. Clear it here instead. <strong>These actions cannot be undone; export first.</strong></p>
+        </header>
+        <div class="body" style="display:flex;flex-direction:column;gap:12px">
+          <div id="resetState" class="mono" style="color:var(--ink-3)"></div>
+          <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center">
+            <button class="btn danger" type="button" id="clearWork">Clear all annotations</button>
+            <span style="font-size:12.3px;color:var(--ink-3)">Every page returns to the pool. The dataset stays.</span>
+          </div>
+          <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center">
+            <button class="btn danger" type="button" id="clearAll">Clear annotations and dataset</button>
+            <span style="font-size:12.3px;color:var(--ink-3)">Back to an empty study, ready for a fresh JSON upload.</span>
+          </div>
+          <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center">
+            <button class="btn" type="button" id="clearLocal">Clear this browser</button>
+            <span style="font-size:12.3px;color:var(--ink-3)">Cached page images, unsent drafts, saved sign-in and this passcode &mdash; on this computer only.</span>
+          </div>
+          <div id="resetStatus"></div>
+        </div>
+      </section>
+    </div>
+  </section>
+</main>
+
+<div class="toast-host" id="toastHost"></div>
+
+<div class="scrim" id="signinScrim" hidden>
+  <form class="signin" id="signinForm">
+    <h2>Sign in to annotate</h2>
+    <p>Your name and email identify your work. Use the same email every time &mdash; that is how your annotations come back after a disconnect or a closed tab.</p>
+    <div class="row">
+      <label for="inName">Name</label>
+      <input type="text" id="inName" autocomplete="name" required placeholder="Hong Gil Dong">
+    </div>
+    <div class="row">
+      <label for="inEmail">Email</label>
+      <input type="email" id="inEmail" autocomplete="email" required placeholder="you@korea.ac.kr">
+    </div>
+    <div id="signinErr"></div>
+    <button class="btn primary" type="submit" style="justify-content:center;padding:9px">Start annotating</button>
+  </form>
+</div>
+
+<div class="scrim" id="adminScrim" hidden>
+  <form class="signin" id="adminForm">
+    <h2>Admin console</h2>
+    <p>Enter the passcode to open the dataset, progress and export tools.</p>
+    <div class="row">
+      <label for="inPass">Passcode</label>
+      <input type="password" id="inPass" autocomplete="current-password" required>
+    </div>
+    <div id="adminErr"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn ghost" type="button" id="adminCancel" style="flex:0 0 auto;padding:9px 14px">Cancel</button>
+      <button class="btn primary" type="submit" style="flex:1;justify-content:center;padding:9px">Open console</button>
+    </div>
+  </form>
+</div>
+
+<script>
+/* ===================================================================
+   Sheets backend — a stand-in for the claude.ai artifact runtime.
+
+   The rest of this page was written against the `db` and `downloads`
+   capabilities, which only work for viewers inside the owning
+   organisation. This block re-implements the same shapes — doc,
+   collection, onSnapshot, acquire, downloads.save — on top of a Google
+   Apps Script web app that stores everything in a Google Sheet, so the
+   page can be hosted anywhere and opened by anyone with the link.
+   Nothing below this block had to change as a result.
+
+   >>> PUT YOUR WEB APP ADDRESS IN BACKEND_URL BEFORE UPLOADING. <<<
+   =================================================================== */
+window.MVQA = (function(){
+"use strict";
+
+var BACKEND_URL = "https://script.google.com/macros/s/AKfycbyJCbxc_oxrIjEAky99hMPCIErUEL7lqE4De5SGR6ztq4xURPBWCs777EGeI5fBUllV/exec";
+
+/* ---------- link parameters: #k=<access code>, #backend=<url> ---------- */
+function hashParam(name){
+  var h = String(location.hash || "").replace(/^#/, "");
+  if(!h) return null;
+  var parts = h.split("&");
+  for(var i=0;i<parts.length;i++){
+    var eq = parts[i].indexOf("=");
+    var k = decodeURIComponent(eq < 0 ? parts[i] : parts[i].slice(0, eq));
+    if(k === name) return eq < 0 ? "" : decodeURIComponent(parts[i].slice(eq+1));
+  }
+  return null;
+}
+function sticky(storeKey, fresh){
+  try{
+    if(fresh !== null && fresh !== undefined && fresh !== ""){ localStorage.setItem(storeKey, fresh); return fresh; }
+    return localStorage.getItem(storeKey) || "";
+  }catch(e){ return fresh || ""; }
+}
+var ENDPOINT   = sticky("mvqa.backend", hashParam("backend")) || BACKEND_URL;
+var CODE       = sticky("mvqa.code",    hashParam("k"));
+var CONFIGURED = /^https?:\/\//.test(ENDPOINT) && ENDPOINT.indexOf("PASTE_YOUR") < 0;
+
+/* ---------- transport ---------- */
+function E(code, msg){ var e = new Error(msg || code); e.code = code; return e; }
+function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+var adminKey = null;
+
+async function rpc(body, tries){
+  if(!CONFIGURED) throw E("no_backend", "This page has no server address in it yet.");
+  tries = tries || 1;
+  var payload = Object.assign({code: CODE}, body);
+  if(adminKey) payload.adminKey = adminKey;
+  var text = null;
+  for(var attempt = 1; ; attempt++){
+    try{
+      var res = await fetch(ENDPOINT, {
+        method: "POST",
+        /* text/plain keeps this a "simple" cross-origin request, so the browser
+           does not send a preflight that Apps Script has no way to answer. */
+        headers: {"Content-Type": "text/plain;charset=utf-8"},
+        body: JSON.stringify(payload),
+        redirect: "follow"
+      });
+      if(!res.ok) throw E("network", "Server returned HTTP " + res.status);
+      text = await res.text();
+      break;
+    }catch(err){
+      if(attempt >= tries) throw (err && err.code ? err : E("network", "Could not reach the server."));
+      await sleep(700 * attempt);
+    }
+  }
+  var out;
+  try{ out = JSON.parse(text); }
+  catch(err){
+    throw E("bad_response", "The server sent a web page instead of data \u2014 redeploy the Apps Script web app with access set to \u201cAnyone\u201d.");
+  }
+  if(!out || out.ok !== true) throw E((out && out.code) || "error", (out && out.error) || "The server refused that request.");
+  return out;
+}
+
+/* ---------- snapshot shapes ---------- */
+function frozen(v){ return function(){ return v; }; }
+function docSnap(path, rec){
+  var data = rec && rec.exists ? rec.data : null;
+  return { id: path.split("/").pop(), exists: !!(rec && rec.exists), data: frozen(data) };
+}
+function colSnap(rows){
+  var docs = rows.map(function(r){ return {id: r.id, data: frozen(r.data)}; });
+  return { docs: docs, empty: docs.length === 0, size: docs.length };
+}
+
+/* ---------- local echo -------------------------------------------------
+   A poll already in flight when we write must not hand the page back the
+   older server state. Recent writes are layered over any snapshot built
+   from a request that started before them.                              */
+var echo = {};
+function remember(path, data){ echo[path] = {data: data, at: Date.now()}; }
+function applyEcho(colPath, map, startedAt){
+  Object.keys(echo).forEach(function(p){
+    var e = echo[p];
+    if(e.at < startedAt - 2000){ delete echo[p]; return; }
+    if(e.at < startedAt) return;
+    if(p.lastIndexOf(colPath + "/", 0) !== 0) return;
+    if(p.slice(colPath.length + 1).indexOf("/") >= 0) return;
+    var id = p.split("/").pop();
+    if(e.data === null) delete map[id]; else map[id] = e.data;
+  });
+}
+
+/* ---------- a small IndexedDB box for caches ---------- */
+var box = (function(){
+  var DB = null;
+  function open(){
+    if(DB) return DB;
+    DB = new Promise(function(resolve){
+      var rq;
+      try{ rq = indexedDB.open("mvqa-cache", 1); }
+      catch(e){ resolve(null); return; }
+      rq.onupgradeneeded = function(){ rq.result.createObjectStore("kv"); };
+      rq.onsuccess = function(){ resolve(rq.result); };
+      rq.onerror   = function(){ resolve(null); };
+    });
+    return DB;
+  }
+  function run(mode, fn){
+    return open().then(function(db){
+      if(!db) return null;
+      return new Promise(function(resolve){
+        var rq;
+        try{ rq = fn(db.transaction("kv", mode).objectStore("kv")); }
+        catch(e){ resolve(null); return; }
+        rq.onsuccess = function(){ resolve(rq.result); };
+        rq.onerror   = function(){ resolve(null); };
+      });
+    });
+  }
+  return {
+    get: function(k){ return run("readonly",   function(st){ return st.get(k); }); },
+    put: function(k, v){ return run("readwrite", function(st){ return st.put(v, k); }); }
+  };
+})();
+var SCOPE = "@" + ENDPOINT.slice(-24);
+
+/* ---------- references ---------- */
+function DocRef(path){ this.path = path; }
+DocRef.prototype.get = function(){
+  var p = this.path;
+  return rpc({op:"read", paths:[p]}, 3).then(function(out){ return docSnap(p, out.docs[p]); });
+};
+DocRef.prototype.set = function(data){
+  var p = this.path;
+  return rpc({op:"write", path:p, data:data, mode:"set"}).then(function(){ remember(p, data); return true; });
+};
+DocRef.prototype.update = function(patch){
+  var p = this.path;
+  return rpc({op:"write", path:p, data:patch, mode:"update"}).then(function(out){
+    if(out.data) remember(p, out.data);
+    return true;
+  });
+};
+DocRef.prototype["delete"] = function(){
+  var p = this.path;
+  return rpc({op:"remove", path:p}).then(function(){ remember(p, null); return true; });
+};
+DocRef.prototype.acquire = function(opts){
+  return rpc({op:"acquire", path:this.path, holder:(opts&&opts.holder)||"", ttlMs:(opts&&opts.ttlMs)||6000})
+    .then(function(out){ return {acquired: !!out.acquired, holder: out.holder || null}; });
+};
+DocRef.prototype.onSnapshot = function(cb, errCb){ return watch(this.path, false, cb, errCb); };
+
+function CollectionRef(path, lim){ this.path = path; this._limit = lim || 0; }
+CollectionRef.prototype.limit = function(n){ return new CollectionRef(this.path, n); };
+CollectionRef.prototype.get = async function(){
+  var path = this.path, cacheable = path.lastIndexOf("pool/", 0) === 0, stamp = null;
+  if(cacheable){
+    /* the page pool never changes inside a round, so it is fetched once per
+       browser and then read straight out of IndexedDB */
+    try{
+      var meta = await rpc({op:"colMeta", collection:path}, 3);
+      var hit  = await box.get("pool:" + path + SCOPE);
+      if(hit && hit.rev === meta.rev && hit.count === meta.count) return colSnap(hit.rows);
+      stamp = meta;
+    }catch(e){}
+  }
+  var rows = [], offset = 0, guard = 0;
+  for(;;){
+    var out = await rpc({op:"list", collection:path, offset:offset}, 3);
+    rows = rows.concat(out.docs || []);
+    if(!out.more || ++guard > 500) break;
+    if(this._limit && rows.length >= this._limit) break;
+    offset = out.nextOffset;
+  }
+  if(this._limit) rows = rows.slice(0, this._limit);
+  if(stamp){ try{ await box.put("pool:" + path + SCOPE, {rev:stamp.rev, count:stamp.count, rows:rows}); }catch(e){} }
+  return colSnap(rows);
+};
+CollectionRef.prototype.onSnapshot = function(cb, errCb){ return watch(this.path, true, cb, errCb); };
+
+/* ---------- polling -----------------------------------------------------
+   onSnapshot was a live socket. Here one batched request covers every
+   active watcher, each path carrying its own cursor so only what changed
+   comes back. The merged state is kept in IndexedDB, so a reload or a
+   second visit resumes instead of pulling the whole study down again.
+   Apps Script bills by runtime, so the page idles slowly and quickens
+   only while somebody is actually looking at it.                        */
+var watchers = [], store = {}, cursors = {};
+var timer = null, polling = false, savedAt = 0;
+var IDLE = 150000, SLOW = 30000, FAST = 12000, fastUntil = 0;
+
+var restored = (async function(){
+  try{
+    var s = await box.get("sync" + SCOPE);
+    if(s && s.store){ store = s.store; cursors = s.cursors || {}; }
+  }catch(e){}
+})();
+
+function persist(force){
+  if(!force && Date.now() - savedAt < 10000) return;
+  savedAt = Date.now();
+  try{ box.put("sync" + SCOPE, {store: store, cursors: cursors}); }catch(e){}
+}
+
+function watch(path, isCol, cb, errCb){
+  var w = {path:path, isCol:isCol, cb:cb, err:errCb||function(){}, alive:true, primed:false};
+  watchers.push(w);
+  if(isCol){
+    /* hand over whatever the last visit left behind while the first poll runs */
+    restored.then(function(){
+      var map = store[path];
+      if(!w.alive || !map) return;
+      var rows = Object.keys(map).map(function(id){ return {id:id, data:map[id]}; });
+      if(rows.length) w.cb(colSnap(rows));
+    });
+  }
+  nudge(0);
+  return function(){ w.alive = false; watchers = watchers.filter(function(x){ return x.alive; }); };
+}
+function interval(){
+  if(document.hidden) return IDLE;
+  return Date.now() < fastUntil ? FAST : SLOW;
+}
+function nudge(delay){
+  clearTimeout(timer);
+  timer = setTimeout(tick, delay === 0 ? 0 : (delay || interval()));
+}
+function uniq(a){ return a.filter(function(v,i){ return a.indexOf(v) === i; }); }
+
+async function tick(){
+  if(polling || !watchers.length || !CONFIGURED){ nudge(); return; }
+  polling = true;
+  try{
+    await restored;
+    var startedAt = Date.now();
+    var cols = uniq(watchers.filter(function(w){ return  w.isCol; }).map(function(w){ return w.path; }));
+    var docs = uniq(watchers.filter(function(w){ return !w.isCol; }).map(function(w){ return w.path; }));
+    var out = await rpc({
+      op: "sync",
+      cols: cols.map(function(p){ return {path:p, since: cursors[p] || 0}; }),
+      docs: docs.map(function(p){ return {path:p, since: cursors[p] || 0}; })
+    }, 2);
+
+    cols.forEach(function(path){
+      var part = (out.cols || {})[path];
+      if(!part) return;
+      cursors[path] = part.rev || cursors[path] || 0;
+      var map = store[path] || (store[path] = {});
+      var live = {};
+      (part.index || []).forEach(function(id){ live[id] = 1; });
+      Object.keys(map).forEach(function(id){ if(!live[id]) delete map[id]; });
+      (part.docs || []).forEach(function(d){ map[d.id] = d.data; });
+      applyEcho(path, map, startedAt);
+      var rows = Object.keys(map).map(function(id){ return {id:id, data:map[id]}; });
+      watchers.forEach(function(w){ if(w.alive && w.isCol && w.path === path){ w.primed = true; w.cb(colSnap(rows)); } });
+    });
+
+    docs.forEach(function(path){
+      var rec = (out.docs || {})[path];
+      if(!rec) return;
+      cursors[path] = rec.rev || cursors[path] || 0;
+      if(rec.unchanged) return;
+      watchers.forEach(function(w){ if(w.alive && !w.isCol && w.path === path){ w.primed = true; w.cb(docSnap(path, rec)); } });
+    });
+
+    persist();
+    setOnline(true);
+  }catch(err){
+    setOnline(false, err);
+    watchers.forEach(function(w){ if(w.alive && !w.primed) w.err(err); });
+  }finally{
+    polling = false;
+    nudge();
+  }
+}
+
+var connected = true, onState = function(){};
+function setOnline(ok, err){
+  if(ok === connected) return;
+  connected = ok;
+  try{ onState(ok, err); }catch(e){}
+}
+document.addEventListener("visibilitychange", function(){ if(!document.hidden) nudge(0); });
+window.addEventListener("online", function(){ nudge(0); });
+window.addEventListener("beforeunload", function(){ try{ persist(true); }catch(e){} });
+
+/* ---------- what the page uses in place of claude.use("db") ---------- */
+var db = {
+  doc: function(path){ return new DocRef(path); },
+  collection: function(path){ return new CollectionRef(path); },
+  /* not part of the original shape: a reset that deleted 300 documents over
+     300 requests would take minutes, so it goes in one call */
+  deleteCollection: function(path){
+    return rpc({op:"removeCollection", collection:path}).then(function(out){
+      store[path] = {}; cursors[path] = 0;
+      persist(true);
+      return out.deleted || 0;
+    });
+  },
+  ping: function(){ return rpc({op:"ping"}, 2); },
+  refresh: function(){ fastUntil = Date.now() + 120000; nudge(0); }
+};
+
+var downloads = {
+  save: function(o){
+    return new Promise(function(resolve, reject){
+      try{
+        var type = /\.csv$/i.test(o.filename) ? "text/csv;charset=utf-8" : "application/json;charset=utf-8";
+        var url = URL.createObjectURL(new Blob([o.data], {type: type}));
+        var a = document.createElement("a");
+        a.href = url; a.download = o.filename; a.style.display = "none";
+        document.body.appendChild(a); a.click();
+        setTimeout(function(){ try{ URL.revokeObjectURL(url); a.remove(); }catch(e){} }, 2000);
+        resolve();
+      }catch(err){ reject(err); }
+    });
+  }
+};
+
+return {
+  db: db,
+  downloads: downloads,
+  configured: CONFIGURED,
+  endpoint: ENDPOINT,
+  refresh: function(){ db.refresh(); },
+  setAdminKey: function(k){ adminKey = k || null; },
+  checkAdmin: function(k){
+    return rpc({op:"checkAdmin", adminKey: k}).then(function(out){
+      if(out.admin) adminKey = k;
+      return !!out.admin;
+    });
+  },
+  onConnectionChange: function(fn){ onState = fn; },
+  isConnected: function(){ return connected; }
+};
+})();
+</script>
+<script>
+(function(){
+"use strict";
+
+/* ============================ state ============================ */
+var S = {
+  db: null, downloads: null, dbReady: false,
+  me: null,                 // {key,name,email}
+  dsId: null, target: 50, maxPerPage: 2, pagesCap: 0, slot: 1,
+  items: [],                // reference examples, index-aligned
+  work: {},                 // idx -> work doc
+  annotators: {},           // key -> annotator doc
+  images: new Map(),        // basename(lowercase) -> Blob
+  imgUrl: null, imgName: null,
+  cur: -1,
+  filter: "all",
+  zoom: null,               // null = fit
+  natural: {w:0,h:0},
+  bbox: null,               // [x1,y1,x2,y2] 0-1000
+  saveTimer: null, pending: false, dirtyLocal: {}, gen: {},
+  unsubWork: null, unsubAnn: null
+};
+
+var LSK = "mvqa.identity.v1";
+var LSD = "mvqa.draft.v1.";
+
+/* ============================ tiny helpers ============================ */
+function $(id){ return document.getElementById(id); }
+function el(tag, cls, txt){ var e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
+function esc(s){ return String(s==null?"":s); }
+function base(p){ var s=String(p||"").replace(/\\/g,"/"); return s.slice(s.lastIndexOf("/")+1); }
+function seg(s){
+  var out = String(s||"").replace(/[^A-Za-z0-9_\-.~:@+]/g,"_");
+  if(!out || out==="." || out==="..") out = "x";
+  return out.slice(0,180);
+}
+function nowISO(){ return new Date().toISOString(); }
+function fmtTime(iso){
+  if(!iso) return "—";
+  var d = new Date(iso); if(isNaN(d)) return "—";
+  var today = new Date();
+  var same = d.toDateString()===today.toDateString();
+  var t = d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  return same ? t : d.toLocaleDateString([], {month:"short", day:"numeric"}) + " " + t;
+}
+function toast(msg, kind){
+  var t = el("div","toast"+(kind?" "+kind:""), msg);
+  $("toastHost").appendChild(t);
+  setTimeout(function(){ t.style.transition="opacity .3s"; t.style.opacity="0"; setTimeout(function(){ t.remove(); }, 320); }, kind==="err"?5200:2800);
+}
+function setSave(state, text){
+  var p = $("savePill"); p.setAttribute("data-state", state); $("savePillText").textContent = text;
+}
+
+/* ============================ routing ============================ */
+var pages = {guide:"page-guide", annotate:"page-annotate", admin:"page-admin"};
+
+/* Passcode on the Admin tab. It is NOT in this file: the page sends what was typed to the
+   backend, which compares it with the ADMIN_KEY set in the Apps Script. The same key is then
+   attached to dataset uploads, setting changes and resets, and the server refuses those
+   without it \u2014 so this is a real lock, not a door sign. */
+var LSA = "mvqa.admin.v2";
+var LSK = "mvqa.adminkey.v2";
+/* The unlock belongs to one signed-in person in one browser session: switching accounts or
+   closing the browser locks it again, so an annotator never inherits the console. */
+function adminUnlockKey(){ return S.me ? S.me.key : "anon"; }
+function isAdminUnlocked(){
+  try{ return sessionStorage.getItem(LSA) === adminUnlockKey(); }catch(e){ return false; }
+}
+function lockAdmin(){
+  try{ sessionStorage.removeItem(LSA); sessionStorage.removeItem(LSK); }catch(e){}
+  try{ MVQA.setAdminKey(null); }catch(e){}
+  if($("page-admin").getAttribute("data-active") === "true") goto("guide");
+}
+try{ localStorage.removeItem("mvqa.admin.v1"); }catch(e){}   // retire the old browser-wide unlock
+
+function openAdminGate(){
+  $("adminScrim").hidden = false;
+  $("adminErr").innerHTML = "";
+  $("inPass").value = "";
+  setTimeout(function(){ $("inPass").focus(); }, 30);
+}
+$("adminForm").addEventListener("submit", async function(ev){
+  ev.preventDefault();
+  var pass = $("inPass").value;
+  if(!pass){ $("inPass").focus(); return; }
+  $("adminErr").innerHTML = '<div class="notice info"><span>&#8987;</span><span>Checking with the server&hellip;</span></div>';
+  var ok = false;
+  try{ ok = await MVQA.checkAdmin(pass); }
+  catch(err){
+    $("adminErr").innerHTML = '<div class="notice err"><span>&#9888;</span><span>' +
+      esc((err && err.message) || "Could not reach the server.") + '</span></div>';
+    return;
+  }
+  if(ok){
+    try{ sessionStorage.setItem(LSA, adminUnlockKey()); sessionStorage.setItem(LSK, pass); }catch(e){}
+    $("adminScrim").hidden = true;
+    $("adminErr").innerHTML = "";
+    goto("admin");
+  }else{
+    $("adminErr").innerHTML = '<div class="notice err"><span>&#9888;</span><span>That passcode is not right.</span></div>';
+    $("inPass").select();
+  }
+});
+$("adminCancel").addEventListener("click", function(){ $("adminScrim").hidden = true; });
+$("adminLock").addEventListener("click", function(){
+  lockAdmin();
+  goto("guide");
+  toast("Admin console locked.", null);
+});
+
+function goto(name){
+  if(name === "admin" && !isAdminUnlocked()){ openAdminGate(); return; }
+  Object.keys(pages).forEach(function(k){ $(pages[k]).setAttribute("data-active", String(k===name)); });
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(b){
+    b.setAttribute("aria-selected", String(b.getAttribute("data-goto")===name));
+  });
+  if(name==="annotate" && !S.me) openSignin();
+  if(name==="annotate") requestAnimationFrame(layoutImage);
+  if(name==="admin"){ renderAdmin(); try{ MVQA.refresh(); }catch(e){} }
+}
+Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(b){
+  b.addEventListener("click", function(){ goto(b.getAttribute("data-goto")); });
+});
+
+/* ============================ sign in ============================ */
+function openSignin(){
+  var scrim = $("signinScrim"); scrim.hidden = false;
+  setTimeout(function(){ $("inName").focus(); }, 30);
+}
+$("switchUser").addEventListener("click", function(){
+  if(S.me){ $("inName").value = S.me.name; $("inEmail").value = S.me.email; }
+  openSignin();
+});
+$("signInBtn").addEventListener("click", function(){ openSignin(); });
+$("signinForm").addEventListener("submit", function(ev){
+  ev.preventDefault();
+  var name = $("inName").value.trim();
+  var email = $("inEmail").value.trim().toLowerCase();
+  $("signinErr").innerHTML = "";
+  if(name.length < 2){ $("signinErr").innerHTML = '<div class="notice err">Enter your full name.</div>'; return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ $("signinErr").innerHTML = '<div class="notice err">That email address does not look right. Check it and try again.</div>'; return; }
+  setIdentity({key: seg(email), name: name, email: email});
+  $("signinScrim").hidden = true;
+});
+function setIdentity(me){
+  var changed = !S.me || S.me.key !== me.key;
+  // a genuine switch locks the console; restoring the same person on reload does not
+  if(S.me && S.me.key !== me.key) lockAdmin();
+  S.me = me;
+  try{ localStorage.setItem(LSK, JSON.stringify(me)); }catch(e){}
+  $("whoBox").hidden = false;
+  $("signedOutBox").hidden = true;
+  $("whoName").innerHTML = "";
+  $("whoName").appendChild(el("b", null, me.name));
+  $("whoName").appendChild(document.createTextNode(" · " + me.email));
+  setSave("saved", "Signed in");
+  syncedDrafts = false;
+  registerAnnotator();
+  syncPendingDrafts();
+  if(changed){ S.cur = -1; renderForm(); }
+  renderRail(); renderProgress();
+}
+try{
+  var stored = JSON.parse(localStorage.getItem(LSK) || "null");
+  if(stored && stored.email) setIdentity(stored);
+}catch(e){}
+
+/* ============================ db wiring ============================ */
+function poolChunks(dsId){ return "pool/" + dsId + "/chunks"; }
+function workCol(dsId){ return "work/" + dsId + "/items"; }
+
+/* A page can carry more than one QA. Slot 1 keeps the plain "<idx>" document id, so every
+   annotation made before slots existed stays exactly where it is and reads as QA 1. */
+function workId(idx, slot){ return slot > 1 ? (idx + "-" + slot) : String(idx); }
+function getWork(idx, slot){ return S.work[workId(idx, slot)] || null; }
+function slotsOf(idx){
+  var out = [];
+  for(var s = 1; s <= Math.max(S.maxPerPage, 2); s++){
+    var w = getWork(idx, s);
+    if(w) out.push({slot:s, w:w});
+  }
+  return out;
+}
+/* whoever holds the page — any slot on it establishes ownership of the whole page */
+function pageOwner(idx){
+  var list = slotsOf(idx);
+  for(var i=0;i<list.length;i++) if(list[i].w.annotatorKey) return list[i].w;
+  return null;
+}
+function myPageCount(){
+  if(!S.me) return 0;
+  var seen = {};
+  Object.keys(S.work).forEach(function(id){
+    var w = S.work[id];
+    if(w && w.annotatorKey === S.me.key && w.idx != null) seen[w.idx] = 1;
+  });
+  return Object.keys(seen).length;
+}
+function myQaCount(doneOnly){
+  if(!S.me) return 0;
+  var n = 0;
+  Object.keys(S.work).forEach(function(id){
+    var w = S.work[id];
+    if(w && w.annotatorKey === S.me.key && (!doneOnly || w.status === "done")) n++;
+  });
+  return n;
+}
+function capReached(){ return S.pagesCap > 0 && myPageCount() >= S.pagesCap; }
+
+(async function connect(){
+  S.downloads = MVQA.downloads;
+  if(!MVQA.configured){
+    S.db = null;
+    S.dbReady = false;
+    setSave("offline", S.me ? "Local only" : "Not signed in");
+    $("datasetStatus").innerHTML = '<div class="notice err"><span>&#9888;</span><span><b>This copy is not connected to a server.</b> Open <span class="mono">index.html</span>, put your Apps Script web app address into <span class="mono">BACKEND_URL</span> near the top of the file, and upload it again. Until then nothing can be saved or shared.</span></div>';
+    renderAdmin();
+    return;
+  }
+  S.db = MVQA.db;
+  S.dbReady = true;
+  try{ if(isAdminUnlocked()) MVQA.setAdminKey(sessionStorage.getItem(LSK) || null); }catch(e){}
+  MVQA.onConnectionChange(function(ok){
+    if(ok){ setSave("saved","Back online"); toast("Reconnected \u2014 anything held in this browser is on its way up.", "ok"); syncPendingDrafts(); }
+    else  { setSave("offline","Offline \u2014 kept in this browser"); }
+  });
+  try{
+    var cfg = await S.db.doc("config/app").get();
+    if(cfg.exists){
+      var c = cfg.data();
+      S.dsId = c.dsId || null;
+      applyConfig(c);
+    }
+  }catch(e){
+    toast("Could not reach the server yet \u2014 retrying in the background.", "err");
+  }
+  if(S.dsId){ await loadPool(); subscribeWork(); }
+  subscribeAnnotators();
+  S.db.doc("config/app").onSnapshot(function(snap){
+    if(!snap.exists) return;
+    var c = snap.data();
+    applyConfig(c);
+    renderProgress(); renderSlots(); renderRail();
+    if(c.dsId && c.dsId !== S.dsId){
+      S.dsId = c.dsId; S.work = {}; S.cur = -1;
+      loadPool().then(function(){ subscribeWork(); renderAll(); });
+    }
+  }, function(){});
+  if(S.me) registerAnnotator();
+  renderAll();
+  setSave(S.me ? "saved" : "idle", S.me ? "All changes saved" : "Not signed in");
+})();
+
+/* the three numbers the administrator can raise mid-study */
+function applyConfig(c){
+  c = c || {};
+  S.target     = Number(c.target) > 0 ? Number(c.target) : 50;
+  S.maxPerPage = Number(c.maxPerPage) > 0 ? Math.min(5, Number(c.maxPerPage)) : 2;
+  S.pagesCap   = Number(c.pagesPerAnnotator) > 0 ? Number(c.pagesPerAnnotator) : 0;
+  $("targetInput").value = S.target;
+  $("maxPerPageInput").value = S.maxPerPage;
+  $("pagesCapInput").value = S.pagesCap || "";
+  if(S.slot > S.maxPerPage) S.slot = 1;
+}
+
+async function loadPool(){
+  if(!S.db || !S.dsId) return;
+  try{
+    var snap = await S.db.collection(poolChunks(S.dsId)).get();
+    var chunks = [];
+    snap.docs.forEach(function(d){
+      var body = d.data() || {};
+      chunks.push({n: Number(body.n)||0, items: body.items||[]});
+    });
+    chunks.sort(function(a,b){ return a.n - b.n; });
+    var all = [];
+    chunks.forEach(function(c){ all = all.concat(c.items); });
+    S.items = all;
+  }catch(e){ toast("Could not load the dataset: " + (e && e.message ? e.message : e), "err"); }
+}
+
+function subscribeWork(){
+  if(!S.db || !S.dsId) return;
+  if(S.unsubWork){ try{ S.unsubWork(); }catch(e){} }
+  S.unsubWork = S.db.collection(workCol(S.dsId)).onSnapshot(function(snap){
+    var next = {};
+    snap.docs.forEach(function(d){
+      var b = d.data();
+      if(b && b.idx != null){ if(!b.slot) b.slot = 1; next[d.id] = b; }
+    });
+    S.work = next;
+    renderRail(); renderProgress(); renderSlots(); renderAdmin();
+    if(S.cur >= 0) reflectClaim();
+    syncPendingDrafts();
+  }, function(err){
+    if(err && err.code === "revoked") setSave("offline", "Access ended");
+  });
+}
+function subscribeAnnotators(){
+  if(!S.db) return;
+  if(S.unsubAnn){ try{ S.unsubAnn(); }catch(e){} }
+  S.unsubAnn = S.db.collection("annotators").onSnapshot(function(snap){
+    var next = {};
+    snap.docs.forEach(function(d){ next[d.id] = d.data(); });
+    S.annotators = next;
+    renderProgress(); renderAdmin();
+  }, function(){});
+}
+
+async function registerAnnotator(){
+  if(!S.db || !S.me) return;
+  try{
+    var ref = S.db.doc("annotators/" + S.me.key);
+    var snap = await ref.get();
+    var prev = snap.exists ? snap.data() : {};
+    await ref.set({
+      key: S.me.key, name: S.me.name, email: S.me.email,
+      skipped: prev.skipped || [],
+      joinedAt: prev.joinedAt || nowISO(),
+      lastSeen: nowISO()
+    });
+  }catch(e){}
+}
+function mySkips(){
+  var a = S.annotators[S.me ? S.me.key : ""] || {};
+  return Array.isArray(a.skipped) ? a.skipped : [];
+}
+
+/* ============================ item status ============================ */
+function statusOf(idx){
+  var owner = pageOwner(idx);
+  if(owner){
+    if(!S.me || owner.annotatorKey !== S.me.key) return "taken";
+    var list = slotsOf(idx);
+    var allDone = list.length > 0 && list.every(function(x){ return x.w.status === "done"; });
+    return allDone ? "done" : "mine";
+  }
+  if(S.me && mySkips().indexOf(idx) >= 0) return "skipped";
+  return "available";
+}
+var STATUS_LABEL = {available:"Open", mine:"In progress", done:"Completed", taken:"Taken", skipped:"Skipped"};
+
+/* ============================ rail ============================ */
+function isNarrow(){ return window.innerWidth <= 1240 && window.innerWidth > 900; }
+function setRail(on){
+  $("annotShell").setAttribute("data-rail", on ? "on" : "off");
+  requestAnimationFrame(layoutImage);
+}
+$("railToggle").addEventListener("click", function(){
+  setRail($("annotShell").getAttribute("data-rail") !== "on");
+});
+$("railScrim").addEventListener("click", function(){ setRail(false); });
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape" && isNarrow() && $("annotShell").getAttribute("data-rail")==="on") setRail(false);
+});
+// on a narrow window the list starts closed and opens as a drawer over the page
+if(isNarrow()) setRail(false);
+var wasNarrow = isNarrow();
+window.addEventListener("resize", function(){
+  var n = isNarrow();
+  if(n !== wasNarrow){ wasNarrow = n; setRail(!n); }
+});
+
+/* step through every page, whatever its status */
+function step(d){
+  if(!S.items.length) return;
+  var i = S.cur < 0 ? (d > 0 ? -1 : S.items.length) : S.cur;
+  var t = i + d;
+  if(t < 0 || t >= S.items.length) return;
+  selectItem(t);
+}
+$("prevPage").addEventListener("click", function(){ step(-1); });
+$("nextPage").addEventListener("click", function(){ step(1); });
+function renderPos(){
+  $("posLbl").textContent = (S.cur >= 0 && S.items.length) ? ((S.cur+1) + " / " + S.items.length) : "—";
+  $("prevPage").disabled = !(S.cur > 0);
+  $("nextPage").disabled = !(S.items.length && S.cur < S.items.length - 1);
+}
+Array.prototype.forEach.call($("filters").querySelectorAll("button"), function(b){
+  b.addEventListener("click", function(){
+    S.filter = b.getAttribute("data-filter");
+    Array.prototype.forEach.call($("filters").querySelectorAll("button"), function(x){
+      x.setAttribute("aria-pressed", String(x===b));
+    });
+    renderRail();
+  });
+});
+
+function renderRail(){
+  var host = $("railList");
+  host.innerHTML = "";
+  if(!S.items.length){
+    host.appendChild(el("div","empty-note", S.dbReady ? "No dataset has been uploaded yet." : "Shared storage unavailable."));
+    return;
+  }
+  var shown = 0;
+  S.items.forEach(function(it, i){
+    var st = statusOf(i);
+    if(S.filter !== "all" && S.filter !== st) return;
+    shown++;
+    var row = el("button","itemrow");
+    row.type = "button";
+    row.setAttribute("aria-current", String(i===S.cur));
+    row.title = STATUS_LABEL[st] + " · " + esc(it.gt_image);
+    row.appendChild(el("span","idx", String(i+1).padStart(3,"0")));
+    var nm = el("div","nm");
+    nm.appendChild(el("div","t", shortName(it.gt_image)));
+    nm.appendChild(el("div","b", [it.brand, it.source].filter(Boolean).join(" · ")));
+    row.appendChild(nm);
+    var n = slotsOf(i).length;
+    if(n > 1){
+      var badge = el("span","chip mine", n + " QA");
+      badge.style.cssText = "font-size:10px;padding:1px 6px";
+      row.appendChild(badge);
+    }
+    row.appendChild(el("span","dotstate "+st));
+    row.addEventListener("click", function(){ selectItem(i); });
+    host.appendChild(row);
+  });
+  if(!shown) host.appendChild(el("div","empty-note","Nothing in this view."));
+}
+function shortName(f){
+  var b = base(f).replace(/\.(png|jpe?g|webp|gif|bmp|tiff?)$/i,"");
+  var m = b.match(/page[_-]?0*(\d+)$/i);
+  if(m) return "Page " + m[1];
+  return b.length > 30 ? b.slice(0,14) + "…" + b.slice(-13) : b;
+}
+
+function renderProgress(){
+  var done = myQaCount(true);
+  var pct = S.target ? Math.min(100, Math.round(done / S.target * 100)) : 0;
+  $("progDone").textContent = done;
+  $("progOf").textContent = " / " + S.target + " QA completed";
+  $("progPct").textContent = pct + "%";
+  $("progBar").style.width = pct + "%";
+  var pages = myPageCount();
+  $("progPages").textContent = S.pagesCap
+    ? (pages + " / " + S.pagesCap + " pages used")
+    : (pages + " page" + (pages===1?"":"s") + " in progress");
+  $("progPages").className = "of" + (capReached() ? " capped" : "");
+}
+
+/* ============================ image loading ============================ */
+$("loadZipBtn").addEventListener("click", function(){ $("zipInput").click(); });
+$("loadFilesBtn").addEventListener("click", function(){ $("filesInput").click(); });
+$("zipInput").addEventListener("change", function(e){ if(e.target.files[0]) readZip(e.target.files[0]); e.target.value=""; });
+$("filesInput").addEventListener("change", function(e){
+  var fs = Array.prototype.slice.call(e.target.files);
+  fs.forEach(function(f){ S.images.set(base(f.name).toLowerCase(), f); });
+  e.target.value = "";
+  cacheImages(); afterImages(fs.length);
+});
+
+async function readZip(file){
+  if(typeof JSZip === "undefined"){ toast("The ZIP reader did not load. Use “or pick files” instead.", "err"); return; }
+  $("imgCount").textContent = "reading…";
+  try{
+    var zip = await JSZip.loadAsync(file);
+    var entries = [];
+    zip.forEach(function(path, entry){
+      if(entry.dir) return;
+      var n = base(path);
+      if(n.charAt(0) === ".") return;
+      if(!/\.(png|jpe?g|webp|gif|bmp|tiff?)$/i.test(n)) return;
+      entries.push({name:n.toLowerCase(), entry:entry});
+    });
+    for(var i=0;i<entries.length;i++){
+      var blob = await entries[i].entry.async("blob");
+      S.images.set(entries[i].name, blob);
+      if(i % 12 === 0) $("imgCount").textContent = (i+1) + " / " + entries.length;
+    }
+    cacheImages();
+    afterImages(entries.length);
+  }catch(err){
+    $("imgCount").textContent = S.images.size + " images";
+    toast("That ZIP could not be read: " + (err && err.message ? err.message : err), "err");
+  }
+}
+function afterImages(n){
+  $("imgCount").textContent = S.images.size + " images";
+  $("imgCount").className = "chip " + (S.images.size ? "done" : "available");
+  if(n) toast(n + " page image" + (n===1?"":"s") + " loaded.", "ok");
+  if(S.cur >= 0) showImage(); else if(S.items.length) selectNextOpen();
+}
+
+/* IndexedDB cache so a reload does not need the ZIP again */
+var IDB = null;
+function idb(){
+  if(IDB) return IDB;
+  IDB = new Promise(function(res){
+    try{
+      var rq = indexedDB.open("mvqa-images", 1);
+      rq.onupgradeneeded = function(){ rq.result.createObjectStore("blobs"); };
+      rq.onsuccess = function(){ res(rq.result); };
+      rq.onerror = function(){ res(null); };
+    }catch(e){ res(null); }
+  });
+  return IDB;
+}
+async function cacheImages(){
+  var d = await idb(); if(!d) return;
+  try{
+    var tx = d.transaction("blobs","readwrite"), st = tx.objectStore("blobs");
+    S.images.forEach(function(v,k){ try{ st.put(v,k); }catch(e){} });
+  }catch(e){}
+}
+async function restoreImages(){
+  var d = await idb(); if(!d) return;
+  try{
+    var tx = d.transaction("blobs","readonly"), st = tx.objectStore("blobs");
+    var keys = st.getAllKeys(), vals = st.getAll();
+    await new Promise(function(res){ tx.oncomplete = res; tx.onerror = res; tx.onabort = res; });
+    var ks = keys.result || [], vs = vals.result || [];
+    for(var i=0;i<ks.length;i++) S.images.set(ks[i], vs[i]);
+    if(ks.length){
+      $("imgCount").textContent = S.images.size + " images";
+      $("imgCount").className = "chip done";
+      if(S.cur >= 0) showImage();
+    }
+  }catch(e){}
+}
+restoreImages();
+
+/* ============================ selection ============================ */
+function selectItem(i){
+  if(i === S.cur) return;
+  flushSave(true);
+  S.cur = i;
+  S.slot = 1;
+  S.bbox = null;
+  if(isNarrow()) setRail(false);
+  renderRail();
+  renderPos();
+  renderSlots();
+  renderForm();
+  showImage();
+}
+function selectNextOpen(){
+  for(var i=0;i<S.items.length;i++){
+    var st = statusOf(i);
+    if(st === "available" || st === "mine"){ selectItem(i); return true; }
+  }
+  toast("No open pages left in the pool.", null);
+  return false;
+}
+$("addQaBtn").addEventListener("click", function(){
+  var n = canAddSlot();
+  if(n) selectSlot(n);
+});
+$("nextBtn").addEventListener("click", function(){
+  for(var i=S.cur+1;i<S.items.length;i++){
+    var st = statusOf(i);
+    if(st === "available" || st === "mine"){ selectItem(i); return; }
+  }
+  selectNextOpen();
+});
+
+/* ============================ image display ============================ */
+function showImage(){
+  var it = S.items[S.cur];
+  var canvas = $("canvas"), ph = $("stagePlaceholder"), media = $("canvasMedia");
+  if(!it){
+    canvas.hidden = true; ph.hidden = false;
+    ph.querySelector("h3").textContent = "Nothing loaded yet";
+    ph.querySelector("p").textContent = "Sign in, then load the image ZIP you downloaded from Drive. The pages appear in the list on the left.";
+    return;
+  }
+  $("stageFile").textContent = base(it.gt_image || "(no image name)");
+  $("stageSource").textContent = [it.brand, it.source].filter(Boolean).join("  ·  ") || "—";
+
+  var key = base(it.gt_image || "").toLowerCase();
+  var blob = S.images.get(key);
+  if(S.imgUrl){ URL.revokeObjectURL(S.imgUrl); S.imgUrl = null; }
+  media.innerHTML = "";
+  if(!blob){
+    canvas.hidden = true; ph.hidden = false;
+    ph.querySelector("h3").textContent = "Image not loaded";
+    ph.querySelector("p").innerHTML = "This page needs <span class='mono'>" + esc(base(it.gt_image||"")) + "</span>. Load the image ZIP with the button above.";
+    return;
+  }
+  ph.hidden = true; canvas.hidden = false;
+  S.imgUrl = URL.createObjectURL(blob);
+  var img = new Image();
+  img.alt = "Manual page " + base(it.gt_image||"");
+  img.onload = function(){
+    S.natural = {w: img.naturalWidth, h: img.naturalHeight};
+    layoutImage();
+    drawBox();
+  };
+  img.src = S.imgUrl;
+  media.appendChild(img);
+}
+function layoutImage(){
+  var canvas = $("canvas");
+  if(canvas.hidden || !S.natural.w) return;
+  var wrap = $("canvasWrap");
+  var availW = wrap.clientWidth - 36, availH = wrap.clientHeight - 36;
+  var w;
+  if(S.zoom == null){
+    var scale = Math.min(availW / S.natural.w, availH / S.natural.h, 3);
+    w = Math.max(180, Math.floor(S.natural.w * scale));
+    $("zoomLvl").textContent = Math.round(w / S.natural.w * 100) + "%";
+  }else{
+    w = Math.max(180, Math.floor(S.natural.w * S.zoom));
+    $("zoomLvl").textContent = Math.round(S.zoom * 100) + "%";
+  }
+  canvas.style.width = w + "px";
+  canvas.style.height = Math.round(w * S.natural.h / S.natural.w) + "px";
+}
+function currentScale(){
+  if(!S.natural.w) return 1;
+  return $("canvas").clientWidth / S.natural.w;
+}
+$("zoomIn").addEventListener("click", function(){ S.zoom = Math.min(4, (S.zoom==null?currentScale():S.zoom) * 1.25); layoutImage(); });
+$("zoomOut").addEventListener("click", function(){ S.zoom = Math.max(0.1, (S.zoom==null?currentScale():S.zoom) / 1.25); layoutImage(); });
+$("zoomFit").addEventListener("click", function(){ S.zoom = null; layoutImage(); });
+window.addEventListener("resize", function(){ layoutImage(); });
+
+/* ============================ bbox editing ============================ */
+var drag = null;
+
+/* Panning: at any zoom above "fit" the page is bigger than its frame, so dragging has to be
+   able to move it. Box is the default tool; Pan is a toggle, holding Space or the middle
+   mouse button borrows it for one drag. */
+S.tool = "box";
+S.space = false;
+function setTool(t){
+  S.tool = t;
+  $("toolBox").setAttribute("aria-pressed", String(t === "box"));
+  $("toolPan").setAttribute("aria-pressed", String(t === "pan"));
+  reflectCursor();
+}
+function reflectCursor(){
+  var ov = $("overlay");
+  ov.classList.toggle("pan", S.tool === "pan" || S.space);
+}
+$("toolBox").addEventListener("click", function(){ setTool("box"); });
+$("toolPan").addEventListener("click", function(){ setTool("pan"); });
+function typingNow(){
+  var a = document.activeElement;
+  if(!a) return false;
+  var t = (a.tagName || "").toLowerCase();
+  return t === "textarea" || t === "input" || a.isContentEditable;
+}
+document.addEventListener("keydown", function(e){
+  if(typingNow()) return;
+  if(e.code === "Space" && !S.space){ S.space = true; reflectCursor(); e.preventDefault(); }
+  else if(e.key === "b" || e.key === "B") setTool("box");
+  else if(e.key === "h" || e.key === "H") setTool("pan");
+});
+document.addEventListener("keyup", function(e){
+  if(e.code === "Space"){ S.space = false; reflectCursor(); }
+});
+window.addEventListener("blur", function(){ S.space = false; reflectCursor(); });
+function wantsPan(ev){ return S.tool === "pan" || S.space || ev.button === 1; }
+
+function drawBox(){
+  var ov = $("overlay");
+  ov.innerHTML = "";
+  var readout = $("bboxReadout");
+  if(!S.bbox){
+    readout.className = "bboxreadout empty";
+    $("bboxVals").textContent = "no box — drag on the image";
+    $("clearBox").hidden = true;
+    return;
+  }
+  readout.className = "bboxreadout";
+  $("bboxVals").textContent = "[" + S.bbox.join(", ") + "]";
+  $("clearBox").hidden = false;
+  // percentages, not pixels: the box then tracks the image through every zoom and resize
+  var b = S.bbox;
+  var box = el("div","bbox");
+  box.style.left = (b[0]/10) + "%";
+  box.style.top = (b[1]/10) + "%";
+  box.style.width = ((b[2]-b[0])/10) + "%";
+  box.style.height = ((b[3]-b[1])/10) + "%";
+  box.appendChild(el("span","tag","EVIDENCE"));
+  ["nw","ne","sw","se"].forEach(function(h){
+    var k = el("span","h "+h); k.setAttribute("data-h", h); box.appendChild(k);
+  });
+  ov.appendChild(box);
+}
+function ovPoint(ev){
+  var r = $("overlay").getBoundingClientRect();
+  var x = (ev.clientX - r.left) / r.width * 1000;
+  var y = (ev.clientY - r.top) / r.height * 1000;
+  return [Math.max(0, Math.min(1000, x)), Math.max(0, Math.min(1000, y))];
+}
+$("overlay").addEventListener("pointerdown", function(ev){
+  if(S.cur < 0 || $("canvas").hidden) return;
+  if(wantsPan(ev)){
+    ev.preventDefault();
+    $("overlay").setPointerCapture(ev.pointerId);
+    var wrap = $("canvasWrap");
+    drag = {mode:"pan", cx:ev.clientX, cy:ev.clientY, sl:wrap.scrollLeft, st:wrap.scrollTop};
+    $("overlay").classList.add("panning");
+    return;
+  }
+  if(!ensureEditable()) return;
+  ev.preventDefault();
+  $("overlay").setPointerCapture(ev.pointerId);
+  var p = ovPoint(ev);
+  var handle = ev.target && ev.target.getAttribute ? ev.target.getAttribute("data-h") : null;
+  if(handle && S.bbox){
+    drag = {mode:"resize", h:handle, start:S.bbox.slice()};
+  }else if(S.bbox && ev.target && ev.target.classList && ev.target.classList.contains("bbox")){
+    drag = {mode:"move", origin:p, start:S.bbox.slice()};
+  }else{
+    drag = {mode:"new", origin:p};
+    S.bbox = [Math.round(p[0]), Math.round(p[1]), Math.round(p[0]), Math.round(p[1])];
+    drawBox();
+  }
+});
+$("overlay").addEventListener("pointermove", function(ev){
+  if(!drag) return;
+  if(drag.mode === "pan"){
+    var wrap = $("canvasWrap");
+    wrap.scrollLeft = drag.sl - (ev.clientX - drag.cx);
+    wrap.scrollTop  = drag.st - (ev.clientY - drag.cy);
+    return;
+  }
+  var p = ovPoint(ev);
+  if(drag.mode === "new"){
+    S.bbox = norm(drag.origin[0], drag.origin[1], p[0], p[1]);
+  }else if(drag.mode === "move"){
+    var dx = p[0]-drag.origin[0], dy = p[1]-drag.origin[1];
+    var s = drag.start, w = s[2]-s[0], h = s[3]-s[1];
+    var x1 = Math.max(0, Math.min(1000-w, s[0]+dx));
+    var y1 = Math.max(0, Math.min(1000-h, s[1]+dy));
+    S.bbox = [Math.round(x1), Math.round(y1), Math.round(x1+w), Math.round(y1+h)];
+  }else{
+    var s2 = drag.start.slice();
+    if(drag.h.indexOf("n") >= 0) s2[1] = p[1]; else s2[3] = p[1];
+    if(drag.h.indexOf("w") >= 0) s2[0] = p[0]; else s2[2] = p[0];
+    S.bbox = norm(s2[0], s2[1], s2[2], s2[3]);
+  }
+  drawBox();
+});
+function endDrag(){
+  if(!drag) return;
+  if(drag.mode === "pan"){ drag = null; $("overlay").classList.remove("panning"); return; }
+  drag = null;
+  if(S.bbox && (S.bbox[2]-S.bbox[0] < 4 || S.bbox[3]-S.bbox[1] < 4)){ S.bbox = null; }
+  drawBox(); updateChecklist(); queueSave();
+}
+$("overlay").addEventListener("pointerup", endDrag);
+$("overlay").addEventListener("pointercancel", endDrag);
+function norm(x1,y1,x2,y2){
+  return [Math.round(Math.min(x1,x2)), Math.round(Math.min(y1,y2)), Math.round(Math.max(x1,x2)), Math.round(Math.max(y1,y2))];
+}
+$("clearBox").addEventListener("click", function(){ S.bbox = null; drawBox(); updateChecklist(); queueSave(); });
+
+/* ============================ form ============================ */
+var FIELDS = [["fQuestion","question"],["fAnswer","answer"],["fEvidenceText","evidenceText"],["fImageDesc","imageDescription"]];
+FIELDS.forEach(function(pair){
+  $(pair[0]).addEventListener("input", function(){ updateChecklist(); queueSave(); });
+});
+
+/* one row of pills: the QA slots already on this page, plus "Add QA" while the page allows more */
+function renderSlots(){
+  var bar = $("slotBar");
+  if(!bar) return;
+  bar.innerHTML = "";
+  if(S.cur < 0 || !S.items[S.cur]) return;
+  if(S.maxPerPage <= 1) return;
+
+  var list = slotsOf(S.cur);
+  var owner = pageOwner(S.cur);
+  var mine = !owner || (S.me && owner.annotatorKey === S.me.key);
+  var highest = list.length ? list[list.length-1].slot : 0;
+
+  bar.appendChild(el("span","lbl","QA on this page"));
+  // the slot being written counts even before it has been saved once
+  var shown = Math.max(highest, S.slot, 1);
+  for(var s = 1; s <= shown; s++){
+    (function(slot){
+      var w = getWork(S.cur, slot);
+      var b = el("button","slotbtn");
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(slot === S.slot));
+      b.setAttribute("data-state", w ? (w.status === "done" ? "done" : "draft") : "empty");
+      b.appendChild(el("span","st"));
+      b.appendChild(document.createTextNode("QA " + slot));
+      b.addEventListener("click", function(){ selectSlot(slot); });
+      bar.appendChild(b);
+    })(s);
+  }
+  // room for one more once the highest slot has something in it — saved or still only local
+  if(mine && canAddSlot()){
+    var add = el("button","slotbtn add");
+    add.type = "button";
+    add.textContent = "+ Add QA " + (shown + 1);
+    add.title = "Write another question for this same page";
+    add.addEventListener("click", function(){ selectSlot(shown + 1); });
+    bar.appendChild(add);
+  }
+}
+/* the next empty slot on this page, or 0 when there is no room for one */
+function canAddSlot(){
+  if(S.cur < 0 || S.maxPerPage <= 1) return 0;
+  var owner = pageOwner(S.cur);
+  if(owner && (!S.me || owner.annotatorKey !== S.me.key)) return 0;
+  var list = slotsOf(S.cur);
+  var highest = Math.max(1, list.length ? list[list.length-1].slot : 0);
+  if(highest >= S.maxPerPage) return 0;
+  var last = getWork(S.cur, highest) || (S.me ? readLocalDraft(S.cur, highest) : null);
+  if(!last || isBlank(last)) return 0;
+  var next = highest + 1;
+  return next === S.slot ? 0 : next;   // already sitting on the empty new slot
+}
+function selectSlot(slot){
+  if(slot === S.slot) return;
+  flushSave(true);
+  S.slot = slot;
+  S.bbox = null;
+  renderSlots();
+  renderForm();
+  drawBox();
+}
+
+function renderForm(){
+  var it = S.items[S.cur];
+  $("formEmpty").hidden = !!it;
+  $("formBody").hidden = !it;
+  $("formFoot").hidden = !it;
+  if(!it) return;
+
+  var w = getWork(S.cur, S.slot) || {};
+  var mine = !!(w.annotatorKey && S.me && w.annotatorKey === S.me.key);
+  var free = !w.annotatorKey;
+  var local = (mine || free) ? readLocalDraft(S.cur, S.slot) : null;
+  var src = w.annotatorKey ? w : {};
+  // an unsent local draft (connection dropped mid-typing) wins over an older server copy
+  if(local && (local.updatedAt || "") > (src.updatedAt || "")) src = local;
+
+  $("fQuestion").value = src.question || "";
+  $("fAnswer").value = src.answer || "";
+  $("fEvidenceText").value = src.evidenceText || "";
+  $("fImageDesc").value = src.imageDescription || "";
+  S.bbox = Array.isArray(src.bbox) && src.bbox.length === 4 ? src.bbox.slice() : null;
+
+  $("qHint").textContent = it.brand ? ("must name “" + it.brand + "” + model") : "brand + model, visual cues only";
+
+  // reference example
+  var rb = $("refBody");
+  rb.innerHTML = "";
+  addRef(rb, "query_id", it.query_id);
+  addRef(rb, "brand / source", [it.brand, it.source].filter(Boolean).join("  ·  "));
+  addRef(rb, "question", it.query);
+  addRef(rb, "answer", it.answer);
+  var evd = it.evidence || {};
+  addRef(rb, "text evidence", evd.text);
+  addRef(rb, "image evidence", evd.image_description);
+  addRef(rb, "bbox", Array.isArray(evd.bbox) ? "[" + evd.bbox.join(", ") + "]  " + (evd.bbox_format || "") : null);
+  var acts = el("div", null);
+  acts.style.cssText = "display:flex;gap:7px;flex-wrap:wrap;margin-top:2px";
+  var showBtn = el("button","btn sm ghost","Show reference box on page");
+  showBtn.type = "button";
+  showBtn.addEventListener("click", function(){
+    if(!Array.isArray(evd.bbox) || evd.bbox.length !== 4){ toast("This reference has no bounding box.", null); return; }
+    S.bbox = evd.bbox.map(Number); drawBox(); updateChecklist(); queueSave();
+    toast("Reference box copied in — adjust it to your own target.", null);
+  });
+  acts.appendChild(showBtn);
+  rb.appendChild(acts);
+
+  $("refBlock").open = false;
+  renderSpans(it.gt_page_ambiguous_spans);
+  reflectClaim();
+  drawBox();
+  updateChecklist();
+}
+/* gt_page_ambiguous_spans — page text that cannot be resolved without the image */
+function renderSpans(spans){
+  var block = $("spanBlock"), body = $("spanBody");
+  body.innerHTML = "";
+  if(!Array.isArray(spans) || !spans.length){ block.hidden = true; block.open = false; return; }
+  block.hidden = false;
+  block.open = false;
+  $("spanCount").textContent = String(spans.length);
+  var list = el("div","spanlist");
+  spans.forEach(function(s){
+    if(!s || typeof s !== "object") return;
+    var card = el("div","spancard");
+
+    var sp = el("div","sp");
+    markSpan(sp, String(s.ambiguous_span || ""), String(s.ambiguous_element || ""));
+    card.appendChild(sp);
+
+    var tags = el("div","tags");
+    if(s.type) tags.appendChild(el("span","chip type", String(s.type)));
+    if(s.confidence){
+      var c = String(s.confidence).toLowerCase();
+      var cls = (c === "high" || c === "medium" || c === "low") ? "conf-" + c : "conf-low";
+      tags.appendChild(el("span","chip " + cls, c + " confidence"));
+    }
+    if(tags.children.length) card.appendChild(tags);
+
+    if(s.object){
+      var ob = el("div","obj");
+      ob.appendChild(el("b", null, "object"));
+      ob.appendChild(document.createTextNode(String(s.object)));
+      card.appendChild(ob);
+    }
+    if(s.ambiguous_element && String(s.ambiguous_element) !== String(s.object || "")){
+      var ae = el("div","obj");
+      ae.appendChild(el("b", null, "element"));
+      ae.appendChild(document.createTextNode(String(s.ambiguous_element)));
+      card.appendChild(ae);
+    }
+    if(s.reason) card.appendChild(el("div","why", String(s.reason)));
+
+    list.appendChild(card);
+  });
+  body.appendChild(list);
+}
+/* highlight the ambiguous element inside the span, without ever parsing HTML */
+function markSpan(host, text, needle){
+  if(!needle || text.indexOf(needle) < 0){ host.textContent = text; return; }
+  var i = text.indexOf(needle);
+  if(i > 0) host.appendChild(document.createTextNode(text.slice(0, i)));
+  host.appendChild(el("mark", null, needle));
+  var rest = text.slice(i + needle.length);
+  if(rest) host.appendChild(document.createTextNode(rest));
+}
+
+function addRef(host, k, v){
+  if(v == null || v === "") return;
+  var f = el("div","rf");
+  f.appendChild(el("div","rk", k));
+  f.appendChild(el("div","rv", String(v)));
+  host.appendChild(f);
+}
+
+function reflectClaim(){
+  var w = getWork(S.cur, S.slot);
+  var owner = pageOwner(S.cur);
+  var host = $("claimNotice");
+  host.innerHTML = "";
+  var locked = !!(owner && (!S.me || owner.annotatorKey !== S.me.key));
+  var done = !!(w && w.status === "done" && S.me && w.annotatorKey === S.me.key);
+  var ro = locked;
+  // a page allowance that is already spent blocks new pages, never pages already claimed
+  var blocked = !locked && !owner && capReached();
+  if(blocked) ro = true;
+  FIELDS.forEach(function(p){ $(p[0]).readOnly = ro; $(p[0]).style.opacity = ro ? ".6" : "1"; });
+  $("completeBtn").disabled = ro;
+  $("skipBtn").disabled = ro;
+  // offer the delete whenever there is anything of mine to throw away, server-side or local
+  var minesOnServer = !!(w && S.me && w.annotatorKey === S.me.key);
+  var draft = S.me ? readLocalDraft(S.cur, S.slot) : null;
+  $("releaseBtn").hidden = !(minesOnServer || (!locked && draft && !isBlank(draft)));
+  $("releaseBtn").textContent = S.maxPerPage > 1 ? ("Delete QA " + S.slot) : "Delete my annotation";
+  var nextSlot = canAddSlot();
+  $("addQaBtn").hidden = !nextSlot;
+  if(nextSlot) $("addQaBtn").textContent = "+ Add QA " + nextSlot;
+  if(locked){
+    var n = el("div","notice warn");
+    n.innerHTML = "<span>&#9888;</span><span>" + esc(owner.annotatorName || "Another annotator") + " claimed this page. Pick a different one.</span>";
+    host.appendChild(n);
+  }else if(blocked){
+    var cn = el("div","notice warn");
+    cn.innerHTML = "<span>&#9888;</span><span>You have used all " + S.pagesCap + " of your pages. Finish or release one, or ask the administrator to raise your page allowance.</span>";
+    host.appendChild(cn);
+  }else if(done){
+    var next = canAddSlot();
+    var d = el("div","notice info");
+    d.style.cssText = "flex-wrap:wrap;align-items:center";
+    var txt = el("span", null, next
+      ? ("QA " + S.slot + " is complete. This page can take another question — a different element on the same page.")
+      : "Marked complete. Editing it again keeps it complete.");
+    d.appendChild(el("span", null, "✓"));
+    d.appendChild(txt);
+    if(next){
+      var cta = el("button","btn primary sm", "+ Add QA " + next);
+      cta.type = "button";
+      cta.style.marginLeft = "auto";
+      cta.addEventListener("click", function(){ selectSlot(next); });
+      d.appendChild(cta);
+    }
+    host.appendChild(d);
+    $("completeBtn").textContent = "Completed";
+  }
+  if(!done) $("completeBtn").textContent = "Mark complete";
+}
+function ensureEditable(){
+  if(!S.me){ openSignin(); return false; }
+  var owner = pageOwner(S.cur);
+  if(owner && owner.annotatorKey !== S.me.key){ toast("This page belongs to another annotator.", "err"); return false; }
+  if(!owner && capReached()){
+    toast("You have used all " + S.pagesCap + " of your pages. Ask the administrator to raise your allowance.", "err");
+    return false;
+  }
+  return true;
+}
+
+function updateChecklist(){
+  var it = S.items[S.cur] || {};
+  var q = $("fQuestion").value.trim();
+  var checks = {
+    brand: !!(it.brand && q.toLowerCase().indexOf(String(it.brand).toLowerCase()) >= 0),
+    question: q.length >= 15,
+    answer: $("fAnswer").value.trim().length >= 2,
+    evtext: $("fEvidenceText").value.trim().length >= 2,
+    imgdesc: $("fImageDesc").value.trim().length >= 5,
+    bbox: !!S.bbox
+  };
+  Array.prototype.forEach.call($("checklist").children, function(row){
+    var k = row.getAttribute("data-key");
+    row.setAttribute("data-ok", String(!!checks[k]));
+    if(k === "brand") row.setAttribute("data-warn", String(!checks.brand && q.length > 0));
+  });
+  return checks;
+}
+
+/* ============================ saving ============================ */
+function collect(){
+  var it = S.items[S.cur] || {};
+  return {
+    idx: S.cur,
+    slot: S.slot,
+    queryId: it.query_id != null ? String(it.query_id) : String(S.cur),
+    gtImage: it.gt_image || "",
+    brand: it.brand || "",
+    source: it.source || "",
+    question: $("fQuestion").value.trim(),
+    answer: $("fAnswer").value.trim(),
+    evidenceText: $("fEvidenceText").value.trim(),
+    imageDescription: $("fImageDesc").value.trim(),
+    bbox: S.bbox ? S.bbox.slice() : null,
+    updatedAt: nowISO()
+  };
+}
+function isBlank(d){
+  return !d.question && !d.answer && !d.evidenceText && !d.imageDescription && !d.bbox;
+}
+/* slot 1 keeps its original key, so drafts written before slots existed still load */
+function draftKey(idx, slot){
+  return LSD + (S.me?S.me.key:"anon") + "." + (S.dsId||"local") + "." + idx + ((slot||1) > 1 ? "-" + slot : "");
+}
+function writeLocalDraft(d){
+  try{ localStorage.setItem(draftKey(d.idx, d.slot), JSON.stringify(d)); }catch(e){}
+}
+function readLocalDraft(idx, slot){
+  try{ return JSON.parse(localStorage.getItem(draftKey(idx, slot)) || "null"); }catch(e){ return null; }
+}
+function dropLocalDraft(idx, slot){
+  try{ localStorage.removeItem(draftKey(idx, slot)); }catch(e){}
+}
+/* wipe one page back to blank: the server document, the browser copy, and the fields on screen */
+function wipeCurrent(){
+  clearTimeout(S.saveTimer);
+  S.pending = false;
+  // a save already in flight for this slot must not resurrect it after the delete
+  var id = workId(S.cur, S.slot);
+  S.gen[id] = (S.gen[id] || 0) + 1;
+  dropLocalDraft(S.cur, S.slot);
+  FIELDS.forEach(function(p){ $(p[0]).value = ""; });
+  S.bbox = null;
+  drawBox();
+  updateChecklist();
+}
+
+function queueSave(){
+  if(S.cur < 0) return;
+  if(!S.me){ openSignin(); return; }
+  var d = collect();
+  writeLocalDraft(d);
+  if(isBlank(d)) return;
+  S.pending = true;
+  setSave("saving","Saving…");
+  clearTimeout(S.saveTimer);
+  S.saveTimer = setTimeout(function(){ flushSave(false); }, 900);
+}
+async function flushSave(immediate){
+  clearTimeout(S.saveTimer);
+  if(S.cur < 0 || !S.me) return;
+  var d = collect();
+  if(isBlank(d)){ return; }
+  writeLocalDraft(d);
+  if(!S.db || !S.dsId){ setSave("offline","Saved in this browser only"); return; }
+  var owner = pageOwner(d.idx);
+  if(owner && owner.annotatorKey !== S.me.key){ setSave("offline","Page taken — not saved"); return; }
+  if(!owner && capReached()){ setSave("offline","Page allowance used up"); return; }
+  var docId = workId(d.idx, d.slot);
+  var w = S.work[docId];
+  var gen = S.gen[docId] || 0;
+  try{
+    if(!w || !w.annotatorKey){
+      var got = await claim(d.idx, d.slot);
+      if(!got.ok){
+        setSave("offline","Page taken — not saved");
+        toast(got.by ? (got.by + " claimed this page a moment ago. Your text was kept locally.") : "This page was just claimed by someone else.", "err");
+        reflectClaim();
+        return;
+      }
+      w = got.doc;
+    }
+    if((S.gen[docId] || 0) !== gen) return;   // deleted while this save was in flight
+    var body = Object.assign({}, w, d, {
+      annotatorKey: S.me.key, annotatorName: S.me.name, annotatorEmail: S.me.email,
+      status: (w && w.status === "done") ? "done" : "draft"
+    });
+    await S.db.doc(workCol(S.dsId) + "/" + docId).set(body);
+    S.work[docId] = body;
+    S.pending = false;
+    setSave("saved","Saved " + fmtTime(body.updatedAt));
+    renderSlots(); reflectClaim();   // the "add another QA" affordance appears as soon as this one is real
+    touchLastSeen();
+  }catch(err){
+    setSave("offline","Offline — kept in this browser");
+    if(!immediate) setTimeout(function(){ flushSave(false); }, 6000);
+  }
+}
+async function claim(idx, slot){
+  slot = slot || 1;
+  var ref = S.db.doc(workCol(S.dsId) + "/" + workId(idx, slot));
+  var lease;
+  try{ lease = await ref.acquire({holder: S.me.key, ttlMs: 6000}); }
+  catch(e){ return {ok:false}; }
+  if(!lease.acquired) return {ok:false};
+  var snap = await ref.get();
+  var cur = snap.exists ? snap.data() : null;
+  if(cur && cur.annotatorKey && cur.annotatorKey !== S.me.key){
+    return {ok:false, by: cur.annotatorName};
+  }
+  // a second QA is only ever added to a page this annotator already holds
+  if(slot > 1){
+    var owner = pageOwner(idx);
+    if(owner && owner.annotatorKey !== S.me.key) return {ok:false, by: owner.annotatorName};
+  }
+  var doc = {
+    idx: idx, slot: slot, annotatorKey: S.me.key, annotatorName: S.me.name, annotatorEmail: S.me.email,
+    status: "draft", claimedAt: nowISO()
+  };
+  await ref.set(Object.assign({}, cur || {}, doc));
+  return {ok:true, doc: doc};
+}
+/* Anything typed while the connection was down lives only in this browser. On the next
+   connected load, push those drafts up so "it is saved on the server" is true without the
+   annotator having to touch the page again. */
+var syncedDrafts = false;
+async function syncPendingDrafts(){
+  if(syncedDrafts || !S.db || !S.dsId || !S.me) return;
+  syncedDrafts = true;
+  var prefix = LSD + S.me.key + "." + S.dsId + ".";
+  var keys = [];
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var k = localStorage.key(i);
+      if(k && k.indexOf(prefix) === 0) keys.push(k);
+    }
+  }catch(e){ return; }
+  var pushed = 0;
+  for(var j=0;j<keys.length;j++){
+    var d = null;
+    try{ d = JSON.parse(localStorage.getItem(keys[j])); }catch(e){}
+    if(!d || d.idx == null || isBlank(d)) continue;
+    var slot = d.slot || 1, id = workId(d.idx, slot);
+    var server = S.work[id];
+    if((server && (server.updatedAt || "")) >= (d.updatedAt || "")) continue;
+    var owner = pageOwner(d.idx);
+    if(owner && owner.annotatorKey !== S.me.key) continue;
+    if(!owner && capReached()) continue;
+    try{
+      if(!server || !server.annotatorKey){
+        var got = await claim(d.idx, slot);
+        if(!got.ok) continue;
+        server = got.doc;
+      }
+      var body = Object.assign({}, server, d, {
+        slot: slot, annotatorKey: S.me.key, annotatorName: S.me.name, annotatorEmail: S.me.email,
+        status: (server && server.status === "done") ? "done" : "draft"
+      });
+      await S.db.doc(workCol(S.dsId) + "/" + id).set(body);
+      S.work[id] = body;
+      pushed++;
+    }catch(e){}
+  }
+  if(pushed){
+    toast(pushed + (pushed === 1 ? " unsent change was" : " unsent changes were") + " uploaded from this browser.", "ok");
+    renderRail(); renderProgress(); renderSlots(); renderAdmin();
+  }
+}
+
+var lastSeenAt = 0;
+function touchLastSeen(){
+  if(!S.db || !S.me) return;
+  var t = Date.now();
+  if(t - lastSeenAt < 60000) return;
+  lastSeenAt = t;
+  S.db.doc("annotators/" + S.me.key).update({lastSeen: nowISO()}).catch(function(){});
+}
+window.addEventListener("beforeunload", function(){ try{ flushSave(true); }catch(e){} });
+setInterval(function(){ if(S.pending) flushSave(false); }, 20000);
+
+/* ---- complete / skip / release ---- */
+$("completeBtn").addEventListener("click", async function(){
+  if(!ensureEditable()) return;
+  var c = updateChecklist();
+  var missing = Object.keys(c).filter(function(k){ return !c[k]; });
+  if(missing.length){
+    if(missing.length === 1 && missing[0] === "brand"){
+      if(!confirm("The question does not mention the brand name from the reference. Mark complete anyway?")) return;
+    }else{
+      toast("Still missing: " + missing.map(function(k){
+        return {brand:"brand in question", question:"question", answer:"answer", evtext:"text evidence", imgdesc:"image evidence", bbox:"bounding box"}[k];
+      }).join(", "), "err");
+      return;
+    }
+  }
+  await flushSave(true);
+  if(!S.db || !S.dsId){ toast("Saved in this browser. It will be submitted once the server is reachable.", "err"); return; }
+  var docId = workId(S.cur, S.slot);
+  var w = S.work[docId];
+  if(!w || w.annotatorKey !== S.me.key){ toast("This page is not yours to complete.", "err"); return; }
+  try{
+    var body = Object.assign({}, w, {status:"done", completedAt: nowISO(), updatedAt: nowISO()});
+    await S.db.doc(workCol(S.dsId) + "/" + docId).set(body);
+    S.work[docId] = body;
+    setSave("saved","Completed " + fmtTime(body.updatedAt));
+    renderRail(); renderProgress(); renderSlots(); reflectClaim();
+    // a page that can still take another QA keeps you here rather than moving on
+    if(S.maxPerPage > 1 && S.slot < S.maxPerPage){
+      toast("QA " + S.slot + " complete. Add another for this page, or move on.", "ok");
+    }else{
+      toast("QA " + S.slot + " complete.", "ok");
+      $("nextBtn").click();
+    }
+  }catch(e){ toast("Could not mark it complete: " + (e && e.message ? e.message : e), "err"); }
+});
+
+$("skipBtn").addEventListener("click", async function(){
+  if(!S.me){ openSignin(); return; }
+  if(S.cur < 0) return;
+  var idx = S.cur;
+  var owned = slotsOf(idx).filter(function(x){ return x.w.annotatorKey === S.me.key; });
+  if(owned.length){
+    if(!confirm("Discard every QA you wrote on this page and return it to the pool?")) return;
+    for(var i=0;i<owned.length;i++){
+      var id = workId(idx, owned[i].slot);
+      S.gen[id] = (S.gen[id] || 0) + 1;
+      dropLocalDraft(idx, owned[i].slot);
+      try{ await S.db.doc(workCol(S.dsId) + "/" + id).delete(); delete S.work[id]; }catch(e){}
+    }
+  }
+  S.slot = 1;
+  wipeCurrent();
+  var skips = mySkips().slice();
+  if(skips.indexOf(idx) < 0) skips.push(idx);
+  if(S.db){
+    try{ await S.db.doc("annotators/" + S.me.key).update({skipped: skips, lastSeen: nowISO()}); }
+    catch(e){ try{ await registerAnnotator(); await S.db.doc("annotators/" + S.me.key).update({skipped: skips}); }catch(e2){} }
+  }
+  var a = S.annotators[S.me.key] || {}; a.skipped = skips; S.annotators[S.me.key] = a;
+  renderRail();
+  toast("Marked not suitable. It stays open for other annotators.", null);
+  $("nextBtn").click();
+});
+
+$("releaseBtn").addEventListener("click", async function(){
+  if(S.cur < 0 || !S.me) return;
+  var owner = pageOwner(S.cur);
+  if(owner && owner.annotatorKey !== S.me.key) return;
+  var idx = S.cur, slot = S.slot, docId = workId(idx, slot);
+  var w = S.work[docId];
+  var others = slotsOf(idx).filter(function(x){ return x.slot !== slot; }).length;
+  var label = S.maxPerPage > 1 ? ("QA " + slot + " for this page") : "your annotation for this page";
+  if(!confirm("Delete " + label + "?\n\nEverything you typed here is discarded" +
+      (others ? ", and the page stays yours for the other QA on it." : " and the page goes back into the pool for anyone to claim.") +
+      "\n\nThis cannot be undone.")) return;
+  wipeCurrent();
+  if(S.db && S.dsId && w && w.annotatorKey === S.me.key){
+    try{
+      await S.db.doc(workCol(S.dsId) + "/" + docId).delete();
+      delete S.work[docId];
+    }catch(e){
+      toast("Cleared here, but the server copy could not be deleted: " + ((e && e.message) || e), "err");
+      return;
+    }
+  }
+  if(!getWork(idx, slot) && slot > 1) S.slot = 1;
+  renderRail(); renderProgress(); renderSlots(); renderForm();
+  toast(others ? ("QA " + slot + " deleted.") : "Annotation deleted. This page is open again.", null);
+});
+
+/* ============================ admin ============================ */
+$("jsonDrop").addEventListener("click", function(){ $("jsonInput").click(); });
+$("jsonDrop").addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); $("jsonInput").click(); } });
+$("jsonDrop").addEventListener("dragover", function(e){ e.preventDefault(); $("jsonDrop").classList.add("over"); });
+$("jsonDrop").addEventListener("dragleave", function(){ $("jsonDrop").classList.remove("over"); });
+$("jsonDrop").addEventListener("drop", function(e){
+  e.preventDefault(); $("jsonDrop").classList.remove("over");
+  var f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if(f) ingestJson(f);
+});
+$("jsonInput").addEventListener("change", function(e){ if(e.target.files[0]) ingestJson(e.target.files[0]); e.target.value=""; });
+
+async function ingestJson(file){
+  var status = $("datasetStatus");
+  status.innerHTML = '<div class="notice info"><span>&#8987;</span><span>Reading ' + esc(file.name) + '&hellip;</span></div>';
+  var arr;
+  try{
+    var text = await file.text();
+    arr = JSON.parse(text);
+  }catch(e){
+    status.innerHTML = '<div class="notice err"><span>&#9888;</span><span>That file is not valid JSON. ' + esc(e.message) + '</span></div>';
+    return;
+  }
+  if(!Array.isArray(arr)){
+    status.innerHTML = '<div class="notice err"><span>&#9888;</span><span>The file must be a JSON array of reference examples.</span></div>';
+    return;
+  }
+  var clean = [], bad = 0;
+  arr.forEach(function(o){
+    if(!o || typeof o !== "object" || !o.gt_image){ bad++; return; }
+    var ev = o.evidence || {};
+    var spans = Array.isArray(o.gt_page_ambiguous_spans) ? o.gt_page_ambiguous_spans.filter(function(s){
+      return s && typeof s === "object";
+    }).map(function(s){
+      return {
+        ambiguous_span: s.ambiguous_span || "", ambiguous_element: s.ambiguous_element || "",
+        object: s.object || "", type: s.type || "", reason: s.reason || "", confidence: s.confidence || ""
+      };
+    }) : [];
+    clean.push({
+      query_id: o.query_id != null ? String(o.query_id) : "",
+      query: o.query || "", answer: o.answer || "",
+      brand: o.brand || "", source: o.source || "", gt_image: String(o.gt_image),
+      evidence: {
+        text: ev.text || "", image_description: ev.image_description || "",
+        bbox: Array.isArray(ev.bbox) ? ev.bbox.map(Number) : null,
+        bbox_format: ev.bbox_format || "normalized_0_1000_xyxy"
+      },
+      gt_page_ambiguous_spans: spans
+    });
+  });
+  if(!clean.length){
+    status.innerHTML = '<div class="notice err"><span>&#9888;</span><span>No usable records &mdash; every object needs a <span class="mono">gt_image</span>.</span></div>';
+    return;
+  }
+  if(!S.db){
+    S.items = clean; S.dsId = null;
+    status.innerHTML = '<div class="notice warn"><span>&#9888;</span><span>Loaded ' + clean.length + ' records into this browser only &mdash; no server is connected, so annotators will not see them.</span></div>';
+    renderAll(); return;
+  }
+  var dsId = "ds" + Date.now().toString(36);
+  // size-aware chunking: ambiguous spans make records uneven, and a stored document caps at 256 KiB
+  var LIMIT = 40000, chunks = [], cur = [], curSize = 2;   /* a spreadsheet cell holds 50,000 characters */
+  clean.forEach(function(rec){
+    var size = JSON.stringify(rec).length + 1;
+    if(cur.length && curSize + size > LIMIT){ chunks.push(cur); cur = []; curSize = 2; }
+    cur.push(rec); curSize += size;
+  });
+  if(cur.length) chunks.push(cur);
+  status.innerHTML = '<div class="notice info"><span>&#8987;</span><span>Uploading ' + clean.length + ' records&hellip;</span></div>';
+  try{
+    var sent = 0;
+    for(var c=0;c<chunks.length;c++){
+      await S.db.doc(poolChunks(dsId) + "/c" + c).set({n:c, items:chunks[c]});
+      sent += chunks[c].length;
+      status.innerHTML = '<div class="notice info"><span>&#8987;</span><span>Uploading&hellip; ' + sent + ' / ' + clean.length + '</span></div>';
+    }
+    var prevCfg = {};
+    try{ var cs = await S.db.doc("config/app").get(); if(cs.exists) prevCfg = cs.data(); }catch(e){}
+    var rounds = Array.isArray(prevCfg.rounds) ? prevCfg.rounds.slice() : [];
+    if(prevCfg.dsId && rounds.indexOf(prevCfg.dsId) < 0) rounds.push(prevCfg.dsId);
+    if(rounds.indexOf(dsId) < 0) rounds.push(dsId);
+    await S.db.doc("config/app").set({
+      dsId: dsId,
+      target: Math.max(1, Number($("targetInput").value) || 50),
+      maxPerPage: Math.max(1, Math.min(5, Number($("maxPerPageInput").value) || 2)),
+      pagesPerAnnotator: Math.max(0, Number($("pagesCapInput").value) || 0),
+      itemCount: clean.length, label: file.name, updatedAt: nowISO(),
+      rounds: rounds.slice(-20)
+    });
+    S.dsId = dsId; S.items = clean; S.work = {}; S.cur = -1;
+    subscribeWork();
+    status.innerHTML = '<div class="notice info"><span>&#10003;</span><span><b>' + clean.length + ' pages</b> are live' +
+      (bad ? ' (' + bad + ' record' + (bad===1?'':'s') + ' skipped &mdash; no gt_image)' : '') +
+      '. Share the image ZIP link with your annotators and they can start.</span></div>';
+    renderAll();
+    toast("Dataset published.", "ok");
+  }catch(err){
+    var m = (err && err.code === "invalid_argument")
+      ? "The server refused the upload. Unlock the Admin console with the study passcode first."
+      : (err && err.message ? err.message : String(err));
+    status.innerHTML = '<div class="notice err"><span>&#9888;</span><span>Upload failed. ' + esc(m) + '</span></div>';
+  }
+}
+
+$("saveTarget").addEventListener("click", async function(){
+  var target = Math.max(1, Math.min(5000, Number($("targetInput").value) || 50));
+  var maxPer = Math.max(1, Math.min(5, Number($("maxPerPageInput").value) || 2));
+  var capRaw = String($("pagesCapInput").value).trim();
+  var cap = capRaw === "" ? 0 : Math.max(0, Math.min(5000, Number(capRaw) || 0));
+  applyConfig({target: target, maxPerPage: maxPer, pagesPerAnnotator: cap});
+  renderProgress(); renderSlots(); renderRail();
+  if(!S.db){ toast("Saved for this browser only — no server is connected.", "err"); return; }
+  try{
+    var snap = await S.db.doc("config/app").get();
+    var prev = snap.exists ? snap.data() : {};
+    await S.db.doc("config/app").set(Object.assign({}, prev, {
+      target: target, maxPerPage: maxPer, pagesPerAnnotator: cap, updatedAt: nowISO()
+    }));
+    toast("Settings saved — annotators see them right away.", "ok");
+  }catch(e){ toast((e && e.code === "forbidden") ? "The server refused that \u2014 unlock the Admin console first." : "Could not save the settings: " + ((e && e.message) || e), "err"); }
+});
+
+function renderAdmin(){
+  var total = S.items.length;
+  var done = 0;
+  var per = {}, claimedPages = {};
+  Object.keys(S.work).forEach(function(k){
+    var w = S.work[k];
+    if(!w.annotatorKey) return;
+    claimedPages[w.idx] = 1;
+    var p = per[w.annotatorKey] || (per[w.annotatorKey] = {name:w.annotatorName, email:w.annotatorEmail, qa:0, done:0, pages:{}, last:""});
+    p.qa++;
+    p.pages[w.idx] = 1;
+    if(w.status === "done"){ done++; p.done++; }
+    if((w.updatedAt||"") > p.last) p.last = w.updatedAt || "";
+  });
+  var claimed = Object.keys(claimedPages).length;
+  Object.keys(S.annotators).forEach(function(k){
+    var a = S.annotators[k];
+    var p = per[k] || (per[k] = {name:a.name, email:a.email, qa:0, done:0, pages:{}, last:""});
+    p.name = p.name || a.name; p.email = p.email || a.email;
+    p.skipped = Array.isArray(a.skipped) ? a.skipped.length : 0;
+    if((a.lastSeen||"") > p.last) p.last = a.lastSeen || "";
+  });
+  var people = Object.keys(per).length;
+
+  var tiles = [
+    {k:"Pages in pool", v:total, sub: S.dsId ? "round " + S.dsId : "no dataset uploaded"},
+    {k:"Pages claimed", v:claimed, sub: total ? Math.round(claimed/total*100) + "% of the pool" : "—"},
+    {k:"QA completed", v:done, sub:"across all annotators", hi:true},
+    {k:"Pages still open", v:Math.max(0, total-claimed), sub:"available to claim"},
+    {k:"Annotators", v:people, sub: S.target + " QA each" + (S.pagesCap ? ", " + S.pagesCap + " pages" : "")}
+  ];
+  var host = $("adminTiles"); host.innerHTML = "";
+  tiles.forEach(function(t){
+    var d = el("div","tile" + (t.hi ? " hi" : ""));
+    d.appendChild(el("div","k", t.k));
+    d.appendChild(el("div","v tnum", String(t.v)));
+    d.appendChild(el("div","sub", t.sub));
+    host.appendChild(d);
+  });
+
+  var th = $("annotTableHost");
+  th.innerHTML = "";
+  var keys = Object.keys(per).sort(function(a,b){ return per[b].done - per[a].done; });
+  if(!keys.length){ th.appendChild(el("div","empty-note","No annotators have signed in yet.")); }
+  else{
+    var tbl = el("table","grid");
+    var thead = el("thead");
+    var hr = el("tr");
+    ["Annotator","Email","QA done","Drafts","Pages","Skipped","Progress","Last activity","Export"].forEach(function(h,i){
+      var c = el("th", null, h); if(i>=2 && i<=5) c.style.textAlign="right"; hr.appendChild(c);
+    });
+    thead.appendChild(hr); tbl.appendChild(thead);
+    var tb = el("tbody");
+    keys.forEach(function(k){
+      var p = per[k];
+      var tr = el("tr");
+      tr.appendChild(el("td","name", p.name || "—"));
+      tr.appendChild(el("td","mono", p.email || k));
+      tr.appendChild(el("td","num", String(p.done)));
+      tr.appendChild(el("td","num", String(Math.max(0, p.qa - p.done))));
+      tr.appendChild(el("td","num", String(Object.keys(p.pages || {}).length) + (S.pagesCap ? " / " + S.pagesCap : "")));
+      tr.appendChild(el("td","num", String(p.skipped || 0)));
+      var pc = el("td");
+      var wrap = el("div"); wrap.style.cssText="display:flex;align-items:center;gap:8px;min-width:120px";
+      var bar = el("div","bar"); bar.style.cssText="flex:1;min-width:64px";
+      var fill = el("i"); fill.style.width = Math.min(100, S.target ? p.done/S.target*100 : 0) + "%";
+      bar.appendChild(fill);
+      wrap.appendChild(bar);
+      wrap.appendChild(el("span","tnum", Math.round(S.target ? p.done/S.target*100 : 0) + "%"));
+      pc.appendChild(wrap); tr.appendChild(pc);
+      tr.appendChild(el("td",null, fmtTime(p.last)));
+
+      var xc = el("td");
+      var row = el("div"); row.style.cssText = "display:flex;gap:6px";
+      var bJson = el("button","btn sm","JSON");
+      bJson.type = "button";
+      bJson.disabled = !p.done;
+      bJson.title = p.done ? ("Download " + p.done + " completed QA by " + (p.name || k)) : "Nothing completed yet";
+      bJson.addEventListener("click", function(){
+        var rows = buildExport(true, k);
+        if(!rows.length){ toast("Nothing completed for this annotator yet.", "err"); return; }
+        offer("manual_vqa_" + fileSlug(p.email || k) + "_" + today() + ".json", JSON.stringify(rows, null, 2));
+      });
+      var bAll = el("button","btn sm ghost","+ drafts");
+      bAll.type = "button";
+      bAll.disabled = !(p.qa);
+      bAll.title = "Download everything by this annotator, drafts included";
+      bAll.addEventListener("click", function(){
+        var rows = buildExport(false, k);
+        if(!rows.length){ toast("Nothing to export for this annotator.", "err"); return; }
+        offer("manual_vqa_" + fileSlug(p.email || k) + "_all_" + today() + ".json", JSON.stringify(rows, null, 2));
+      });
+      row.appendChild(bJson); row.appendChild(bAll);
+      xc.appendChild(row); tr.appendChild(xc);
+
+      tb.appendChild(tr);
+    });
+    tbl.appendChild(tb);
+    th.appendChild(tbl);
+  }
+  $("exportHint").textContent = done + " completed record" + (done===1?"":"s") + " ready";
+  renderResetState();
+}
+
+/* ---- export ---- */
+function buildExport(onlyDone, onlyKey){
+  var out = [];
+  S.items.forEach(function(it, i){
+    slotsOf(i).forEach(function(entry){
+      var w = entry.w;
+      if(!w.annotatorKey) return;
+      if(onlyKey && w.annotatorKey !== onlyKey) return;
+      if(onlyDone && w.status !== "done") return;
+      out.push(exportRow(it, i, entry.slot, w));
+    });
+  });
+  return out;
+}
+function fileSlug(s){
+  return String(s || "annotator").split("@")[0].replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 40) || "annotator";
+}
+function today(){ return new Date().toISOString().slice(0,10); }
+function exportRow(it, i, slot, w){
+  var base = it.query_id || String(i);
+  return {
+      query_id: slot > 1 ? (base + "-" + slot) : base,
+      source_query_id: base,
+      qa_index: slot,
+      query: w.question || "",
+      answer: w.answer || "",
+      brand: it.brand || "",
+      source: it.source || "",
+      gt_image: it.gt_image || "",
+      evidence: {
+        text: w.evidenceText || "",
+        image_description: w.imageDescription || "",
+        bbox: Array.isArray(w.bbox) ? w.bbox : null,
+        bbox_format: "normalized_0_1000_xyxy"
+      },
+      annotator: {name: w.annotatorName || "", email: w.annotatorEmail || ""},
+      status: w.status || "draft",
+      updated_at: w.updatedAt || ""
+  };
+}
+async function offer(filename, data){
+  try{
+    await (S.downloads || MVQA.downloads).save({filename: filename, data: data});
+    toast("Downloaded " + filename, "ok");
+  }catch(err){
+    toast("Download failed: " + ((err && err.message) || err), "err");
+  }
+}
+$("exportDone").addEventListener("click", function(){
+  var rows = buildExport(true);
+  if(!rows.length){ toast("Nothing completed yet.", "err"); return; }
+  offer("manual_vqa_annotations_" + today() + ".json", JSON.stringify(rows, null, 2));
+});
+$("exportAll").addEventListener("click", function(){
+  var rows = buildExport(false);
+  if(!rows.length){ toast("Nothing to export yet.", "err"); return; }
+  offer("manual_vqa_all_" + today() + ".json", JSON.stringify(rows, null, 2));
+});
+$("exportCsv").addEventListener("click", function(){
+  var rows = buildExport(false);
+  if(!rows.length){ toast("Nothing to export yet.", "err"); return; }
+  var head = ["query_id","source_query_id","qa_index","gt_image","brand","source","annotator_name","annotator_email","status","query","answer","evidence_text","image_description","bbox","updated_at"];
+  var lines = [head.join(",")];
+  rows.forEach(function(r){
+    lines.push([
+      r.query_id, r.source_query_id, r.qa_index, r.gt_image, r.brand, r.source, r.annotator.name, r.annotator.email, r.status,
+      r.query, r.answer, r.evidence.text, r.evidence.image_description,
+      r.evidence.bbox ? r.evidence.bbox.join(" ") : "", r.updated_at
+    ].map(function(v){ return '"' + String(v==null?"":v).replace(/"/g,'""') + '"'; }).join(","));
+  });
+  offer("manual_vqa_summary_" + today() + ".csv", lines.join("\n"));
+});
+
+/* ============================ reset ============================ */
+function resetMsg(kind, html){
+  $("resetStatus").innerHTML = '<div class="notice ' + kind + '"><span>' +
+    (kind === "err" ? "&#9888;" : kind === "warn" ? "&#8987;" : "&#10003;") + '</span><span>' + html + '</span></div>';
+}
+async function deleteAllIn(colPath){
+  /* one request rather than one per document: over HTTP the old loop took minutes */
+  if(S.db.deleteCollection) return await S.db.deleteCollection(colPath);
+  var n = 0;
+  for(;;){
+    var snap = await S.db.collection(colPath).limit(300).get();
+    if(snap.empty) break;
+    for(var i=0;i<snap.docs.length;i++){
+      await S.db.doc(colPath + "/" + snap.docs[i].id).delete();
+      n++;
+    }
+    if(snap.docs.length < 300) break;
+  }
+  return n;
+}
+/* every round this study has had, so an old upload's documents can be swept too */
+async function knownRounds(){
+  var ids = {};
+  if(S.dsId) ids[S.dsId] = 1;
+  try{
+    var cfg = await S.db.doc("config/app").get();
+    if(cfg.exists){
+      var r = cfg.data().rounds;
+      if(Array.isArray(r)) r.forEach(function(x){ if(x) ids[x] = 1; });
+      if(cfg.data().dsId) ids[cfg.data().dsId] = 1;
+    }
+  }catch(e){}
+  return Object.keys(ids);
+}
+$("clearWork").addEventListener("click", async function(){
+  if(!S.db){ resetMsg("err","This copy is not connected to a server."); return; }
+  if(!confirm("Delete every annotation in this study?\n\nAll pages return to the pool and each annotator's progress goes back to zero. The dataset itself is kept. This cannot be undone.")) return;
+  resetMsg("warn","Deleting annotations&hellip;");
+  try{
+    var rounds = await knownRounds(), n = 0;
+    for(var i=0;i<rounds.length;i++) n += await deleteAllIn(workCol(rounds[i]));
+    var a = await deleteAllIn("annotators");
+    S.work = {}; S.annotators = {}; S.cur = -1;
+    renderAll();
+    resetMsg("info","Deleted " + n + " annotation" + (n===1?"":"s") + " and " + a + " annotator record" + (a===1?"":"s") + ". The dataset is untouched.");
+  }catch(err){ resetMsg("err","Could not finish: " + esc((err && err.message) || err)); }
+});
+$("clearAll").addEventListener("click", async function(){
+  if(!S.db){ resetMsg("err","This copy is not connected to a server."); return; }
+  if(!confirm("Delete the dataset AND every annotation?\n\nThis empties the study completely. Export anything you want to keep first. This cannot be undone.")) return;
+  resetMsg("warn","Clearing the study&hellip;");
+  try{
+    var rounds = await knownRounds(), n = 0, c = 0;
+    for(var i=0;i<rounds.length;i++){
+      n += await deleteAllIn(workCol(rounds[i]));
+      c += await deleteAllIn(poolChunks(rounds[i]));
+      await S.db.doc("pool/" + rounds[i]).delete().catch(function(){});
+    }
+    var a = await deleteAllIn("annotators");
+    await S.db.doc("config/app").delete();
+    S.work = {}; S.annotators = {}; S.items = []; S.dsId = null; S.cur = -1;
+    if(S.unsubWork){ try{ S.unsubWork(); }catch(e){} S.unsubWork = null; }
+    renderAll();
+    resetMsg("info","Study cleared &mdash; " + n + " annotation" + (n===1?"":"s") + ", " + c + " dataset block" + (c===1?"":"s") + ", " + a + " annotator record" + (a===1?"":"s") + " deleted. Upload a JSON above to start a new round.");
+  }catch(err){ resetMsg("err","Could not finish: " + esc((err && err.message) || err)); }
+});
+$("clearLocal").addEventListener("click", async function(){
+  if(!confirm("Clear this browser's cached page images, unsent drafts, saved sign-in and the admin passcode?\n\nOnly this computer is affected — annotations on the server are kept.")) return;
+  try{
+    var kill = [];
+    for(var i=0;i<localStorage.length;i++){
+      var k = localStorage.key(i);
+      if(k && k.indexOf("mvqa.") === 0 && k !== "mvqa.backend" && k !== "mvqa.code") kill.push(k);
+    }
+    kill.forEach(function(k){ localStorage.removeItem(k); });
+    sessionStorage.removeItem(LSA);
+  }catch(e){}
+  try{ indexedDB.deleteDatabase("mvqa-images"); }catch(e){}
+  try{ indexedDB.deleteDatabase("mvqa-cache"); }catch(e){}
+  S.images = new Map(); IDB = null;
+  $("imgCount").textContent = "0 images";
+  $("imgCount").className = "chip available";
+  resetMsg("info","This browser is clear. Reload the page to start fresh.");
+});
+function renderResetState(){
+  var host = $("resetState");
+  if(!host) return;
+  if(!S.db){ host.textContent = "not connected to a server"; return; }
+  var work = Object.keys(S.work).length, people = Object.keys(S.annotators).length;
+  host.textContent = "round " + (S.dsId || "—") + " · " + S.items.length + " pages · " +
+    work + " annotation" + (work===1?"":"s") + " · " + people + " annotator" + (people===1?"":"s");
+}
+
+/* ============================ render all ============================ */
+function renderAll(){ renderRail(); renderPos(); renderProgress(); renderSlots(); renderForm(); renderAdmin(); }
+renderAll();
+
+/* keyboard: ctrl/cmd+enter completes */
+document.addEventListener("keydown", function(e){
+  if((e.metaKey || e.ctrlKey) && e.key === "Enter"){
+    if($("page-annotate").getAttribute("data-active") === "true" && !$("completeBtn").disabled){
+      e.preventDefault(); $("completeBtn").click();
+    }
+  }
+});
+})();
+</script>
+
+</body></html>
