@@ -270,6 +270,41 @@ main{flex:1;min-height:0;position:relative}
 .dotstate.done{background:var(--ok)}
 .dotstate.taken{background:var(--warn);opacity:.6}
 .dotstate.skipped{background:transparent;border:1.5px dashed var(--line-strong)}
+.dotstate.open2{background:linear-gradient(90deg,var(--warn) 0 50%,var(--line-strong) 50% 100%)}
+.ghostbox{position:absolute;border:2px dashed var(--ink-3);background:transparent;pointer-events:none;opacity:.8}
+.ghostbox .tag{
+  position:absolute;left:-2px;top:-21px;background:var(--ink-3);color:#fff;font-size:10px;font-weight:700;
+  padding:1px 5px;border-radius:3px;letter-spacing:.05em;white-space:nowrap
+}
+.slotbtn[data-theirs="true"]{border-style:dashed}
+.scenario{border:1.5px solid var(--accent);background:var(--accent-soft);border-radius:var(--r-l);padding:20px 22px;margin:0 0 34px}
+.scenario h2{margin:4px 0 8px;font-size:20px;letter-spacing:-.02em;color:var(--ink)}
+.scenario p.big{font-size:15.5px;line-height:1.55;color:var(--ink);margin:0 0 10px;max-width:72ch}
+.scenario ul{margin:0 0 14px;padding-left:19px;color:var(--ink-2);max-width:72ch}
+.scenario li{margin:4px 0}
+.scenario .dodont{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.scenario .dodont > div{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);padding:10px 12px;display:flex;flex-direction:column;gap:4px;font-size:13.2px;color:var(--ink-2)}
+.scenario .do b{color:var(--ok)}
+.scenario .dont b{color:var(--danger)}
+.signin .namehint{font-size:12.6px;color:var(--ink);background:var(--accent-soft);border-radius:var(--r-m);padding:8px 10px}
+.signin .row.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.setting select{
+  background:var(--surface-3);border:1px solid var(--line);border-radius:var(--r-m);
+  padding:7px 9px;font:inherit;font-size:13px;color:inherit;min-width:190px
+}
+.setting.wide{max-width:240px}
+.setting input[type="text"]{
+  width:130px;background:var(--surface-3);border:1px solid var(--line);border-radius:var(--r-m);padding:7px 9px
+}
+.goalpick{display:flex;gap:8px}
+.goalpick label{
+  flex:1;position:relative;border:1px solid var(--line);border-radius:var(--r-m);padding:9px 8px;text-align:center;
+  cursor:pointer;font-weight:600;font-size:13.5px;background:var(--surface-3);color:var(--ink-2)
+}
+.goalpick input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+.goalpick label:has(input:checked){border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.goalpick label:has(input:focus-visible){box-shadow:0 0 0 3px var(--accent-soft)}
+.signin .goalnote{font-size:11.6px;color:var(--ink-3)}
 
 /* min-height:0 is load-bearing: without it the default min-height:auto lets the canvas area
    grow past the window instead of scrolling, and a zoomed page loses its lower half. */
@@ -483,6 +518,7 @@ table.grid td.name{color:var(--ink);font-weight:500}
   .guide-hero{grid-template-columns:minmax(0,1fr)}
 }
 @media (max-width:900px){
+  .scenario .dodont{grid-template-columns:1fr}
   body{overflow:auto;height:auto;min-height:100dvh}
   main{position:static}
   .page{position:static;display:none}
@@ -525,7 +561,7 @@ table.grid td.name{color:var(--ink);font-weight:500}
         <div>
           <span class="eyebrow">Manual VQA dataset</span>
           <h1>Annotation Guidelines</h1>
-          <p class="lede">100 candidate pages &rarr; select the suitable pages &rarr; create up to 2 annotations per page &rarr; 50 QA examples per annotator.</p>
+          <p class="lede">100 candidate pages &rarr; select the suitable pages &rarr; create up to 2 annotations per page &rarr; 50 or 100 QA examples per annotator, your choice.</p>
         </div>
         <div class="pipeline">
           <span class="eyebrow">The question should require this process</span>
@@ -537,6 +573,20 @@ table.grid td.name{color:var(--ink);font-weight:500}
           </ol>
         </div>
       </div>
+
+      <section class="scenario" aria-labelledby="scenarioTitle">
+        <span class="eyebrow">Read this first</span>
+        <h2 id="scenarioTitle">The situation behind every question</h2>
+        <p class="big">Someone is <b>using the electronic product right now</b> and a question comes up. They look at the device &mdash; a button, an icon, a light, a part &mdash; and ask about it. Write every question the way that person would ask it.</p>
+        <ul>
+          <li>Describe the target as it appears <b>on the product</b>: its shape, colour, icon, and where it sits on the device.</li>
+          <li><b>Never point to a place on the manual page.</b> The person asking has not seen the manual &mdash; finding that page is the system's job.</li>
+        </ul>
+        <div class="dodont">
+          <div class="do"><b>&#10003; Allowed</b><span>&ldquo;On the Hyundai Sonata 2026, what does the round button just left of the centre screen do?&rdquo;</span></div>
+          <div class="dont"><b>&#10007; Not allowed</b><span>&ldquo;What is the part in the figure at the top-left of the manual?&rdquo; &middot; &ldquo;&hellip;in the bottom-right picture?&rdquo;</span></div>
+        </div>
+      </section>
 
       <section class="guide-sec">
         <h2>Task</h2>
@@ -571,7 +621,7 @@ table.grid td.name{color:var(--ink);font-weight:500}
           </li>
           <li>The question should therefore require the following process:<br>
             brand &amp; model &rarr; find the relevant manual &rarr; visual description &rarr; find the relevant page &rarr; identify the target visually &rarr; read the associated text &rarr; answer</li>
-          <li>Each manual page is provided with a reference example containing:
+          <li>Most manual pages are provided with a reference example containing:
             <ul>
               <li>Question</li>
               <li>Answer</li>
@@ -581,6 +631,7 @@ table.grid td.name{color:var(--ink);font-weight:500}
             </ul>
           </li>
           <li>Annotators may use these examples as references when creating their own annotations.</li>
+          <li><strong>Extra pages.</strong> Manuals alone may not offer enough suitable pages, so extra pages are included. An extra page has <strong>no reference example</strong> &mdash; only the page image and, where available, its ambiguous spans. Write the QA from the page itself, following the same rules.</li>
         </ul>
       </section>
 
@@ -605,17 +656,18 @@ table.grid td.name{color:var(--ink);font-weight:500}
 
       <section class="guide-sec">
         <h2>Final Output</h2>
-        <p>100 candidate pages &rarr; select the suitable pages &rarr; create up to 2 annotations per page &rarr; <strong>50 QA examples per annotator</strong>.</p>
+        <p>100 candidate pages &rarr; select the suitable pages &rarr; create up to 2 annotations per page &rarr; <strong>50 or 100 QA examples per annotator</strong> &mdash; you choose one when you sign in.</p>
       </section>
 
       <section class="guide-sec">
         <h2>Using this tool</h2>
         <p style="font-size:12.7px;color:var(--ink-3);margin-bottom:12px">How the software works. This is not part of the annotation specification above.</p>
         <ul>
-          <li>Open <strong>Annotate</strong>, sign in with your name and email, and load the image ZIP you downloaded from the Drive link. The images stay in your browser and are never uploaded.</li>
+          <li>Open <strong>Annotate</strong>, sign in with your <strong>name in English</strong>, your email and your goal (<strong>50 or 100 QA</strong>; change it any time with <em>Switch</em>), and load the image ZIP you downloaded from the Drive link. The images stay in your browser and are never uploaded.</li>
           <li>Pick a page from the list on the left. Press <strong>Not suitable</strong> on a page you are not selecting &mdash; it leaves your list and stays open to other annotators.</li>
-          <li>A page becomes yours as soon as you start typing, and no one else can take it after that.</li>
-          <li>A page can carry up to two QA. Once the first has any text in it, <strong>+ Add QA 2</strong> appears above the form and next to <em>Not suitable</em> at the bottom &mdash; press either to write the second question for the same page. The pills above the form switch between QA 1 and QA 2, and each is saved, completed and deleted on its own. The sidebar counts <strong>QA</strong>, not pages.</li>
+          <li>A QA becomes yours as soon as you start typing, and no one else can change it after that.</li>
+          <li>A page can carry up to two QA, and <strong>they do not have to be by the same person</strong>. Once you have written QA 1, <strong>+ Add QA 2</strong> appears &mdash; press it to write a second question about a different element on the same page. When someone else has finished QA 1 on a page, that page shows a <strong>half-filled dot</strong> in the list: open it and you land on QA 2, where you can add your own. You can read their QA 1, and its box is drawn dashed on the page, but only they can change it. The pills above the form switch between QA 1 and QA 2; the sidebar counts <strong>QA</strong>, not pages.</li>
+          <li>Pages marked <strong>extra</strong> in the list have no reference example.</li>
           <li>Drag on the image to draw the bounding box; drag its corners to resize, drag inside it to move. It is stored as <span class="mono">normalized_0_1000_xyxy</span>.</li>
           <li>Zoom with &minus; and + in the toolbar, or <strong>Fit</strong> to see the whole page. When the page is larger than the window, switch to the <strong>Pan</strong> tool &mdash; or just hold <strong>Space</strong> &mdash; and drag to move around it. <span class="mono">B</span> and <span class="mono">H</span> switch between Box and Pan.</li>
           <li>Press <strong>Mark complete</strong> (or &#8984;/Ctrl + Enter) when the page is done. The sidebar counter tracks your completed pages.</li>
@@ -702,7 +754,7 @@ table.grid td.name{color:var(--ink);font-weight:500}
               <ol>
                 <li><span class="n">1</span><span>Open a page and judge whether it <b>suits the task</b></span></li>
                 <li><span class="n">2</span><span>If not, press <b>Not suitable</b> &mdash; it returns to the pool</span></li>
-                <li><span class="n">3</span><span>If it does, start typing &mdash; the page becomes <b>yours</b></span></li>
+                <li><span class="n">3</span><span>If it does, start typing &mdash; that QA becomes <b>yours</b></span></li>
                 <li><span class="n">4</span><span>Drag a box on the image around the target element</span></li>
                 <li><span class="n">5</span><span><b>Mark complete</b> when all six checks are green</span></li>
               </ol>
@@ -717,7 +769,7 @@ table.grid td.name{color:var(--ink);font-weight:500}
             <details class="ref" id="refBlock">
               <summary>
                 <span class="caret" aria-hidden="true">&#9656;</span>
-                <span class="grow">Reference example for this page</span>
+                <span class="grow" id="refTitle">Reference example for this page</span>
                 <span class="chip available">read-only</span>
               </summary>
               <div class="refbody" id="refBody"></div>
@@ -796,7 +848,7 @@ table.grid td.name{color:var(--ink);font-weight:500}
           </div>
           <button class="btn sm" type="button" id="adminLock" style="margin-top:6px">Lock console</button>
         </div>
-        <p>Upload the full reference JSON once. Annotators claim pages from it first-come, first-served; their work is written back here as they type.</p>
+        <p>Upload the dataset once. Annotators take pages first-come, first-served &mdash; and may add a second QA to someone else&rsquo;s page, as set below. Their work is written back here as they type.</p>
         <div class="notice info" style="margin-top:12px;max-width:78ch">
           <span aria-hidden="true">&#9432;</span>
           <span>The passcode is checked by the server, not by this page, and the same key has to accompany every dataset upload, setting change and reset &mdash; so annotators who open this tab cannot change anything even with the file in front of them. Their own annotations save without it. Every completed QA also lands in your Google Sheet the moment it is marked complete.</span>
@@ -808,13 +860,13 @@ table.grid td.name{color:var(--ink);font-weight:500}
       <section class="panel">
         <header>
           <h2>Reference dataset</h2>
-          <p>A JSON array of reference examples. Each object needs <span class="mono">query_id</span> and <span class="mono">gt_image</span>; <span class="mono">brand</span>, <span class="mono">source</span>, <span class="mono">query</span>, <span class="mono">answer</span> and <span class="mono">evidence</span> are shown to annotators.</p>
+          <p>JSON arrays of page records. Each object needs <span class="mono">gt_image</span>; <span class="mono">query_id</span>, <span class="mono">brand</span> and <span class="mono">source</span> are taken from the file name when missing. Records with <span class="mono">query</span>/<span class="mono">answer</span>/<span class="mono">evidence</span> show a reference example; records without become <strong>extra pages</strong>.</p>
         </header>
         <div class="body" style="border-bottom:1px solid var(--line);display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end">
           <div class="setting">
-            <label for="targetInput">QA target per annotator</label>
-            <input type="number" id="targetInput" min="1" max="5000" value="50">
-            <span class="help">How many finished QA each annotator should produce.</span>
+            <label for="targetInput">QA goals to choose from</label>
+            <input type="text" id="targetInput" value="50, 100" inputmode="numeric">
+            <span class="help">Each annotator picks one when signing in. A single number means everyone has that goal.</span>
           </div>
           <div class="setting">
             <label for="pagesCapInput">Pages per annotator</label>
@@ -826,15 +878,52 @@ table.grid td.name{color:var(--ink);font-weight:500}
             <input type="number" id="maxPerPageInput" min="1" max="5" value="2">
             <span class="help">Annotators may write this many questions on one page.</span>
           </div>
+          <div class="setting wide">
+            <label for="otherSecondInput">Second QA by someone else</label>
+            <select id="otherSecondInput">
+              <option value="done">After QA 1 is marked complete</option>
+              <option value="any">As soon as QA 1 exists</option>
+              <option value="never">Never &mdash; page owner only</option>
+            </select>
+            <span class="help">When another annotator may add the next QA to a page. Nobody can ever change someone else&rsquo;s QA.</span>
+          </div>
+          <div class="setting wide">
+            <label for="priorPolicyInput">Pages from earlier rounds</label>
+            <select id="priorPolicyInput">
+              <option value="hide">Hide them</option>
+              <option value="open">Keep open for the remaining QA</option>
+            </select>
+            <span class="help">Pages that already have QA in the earlier results loaded below.</span>
+          </div>
           <button class="btn primary" type="button" id="saveTarget" style="margin-bottom:16px">Save settings</button>
         </div>
         <div class="body" style="display:flex;flex-direction:column;gap:12px">
           <div class="dropzone" id="jsonDrop" tabindex="0" role="button">
-            <span class="t">Drop the reference JSON here, or click to choose a file</span>
-            <span class="s">Uploading a new file starts a fresh round &mdash; existing annotations stay attached to the round they were made in.</span>
+            <span class="t">Drop the dataset JSON here, or click to choose &mdash; several files at once are fine</span>
+            <span class="s">Starts a fresh round. Pages with a reference example come first, extra pages after. The same <span class="mono">gt_image</span> twice is kept once. Existing annotations stay attached to the round they were made in.</span>
           </div>
-          <input type="file" id="jsonInput" accept=".json,application/json" hidden>
+          <input type="file" id="jsonInput" accept=".json,application/json" multiple hidden>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <button class="btn" type="button" id="appendBtn">+ Add pages to this round</button>
+            <span style="font-size:12px;color:var(--ink-3)">For extra pages later on. Work already done is untouched, and pages already in the round are skipped.</span>
+          </div>
+          <input type="file" id="jsonAppendInput" accept=".json,application/json" multiple hidden>
           <div id="datasetStatus"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <header>
+          <h2>Earlier rounds</h2>
+          <p>Load the <strong>completed-QA export</strong> from earlier rounds so the same pages are not annotated twice. Pages are matched by <span class="mono">gt_image</span>; what happens to them is set by <em>Pages from earlier rounds</em> above. Loading replaces whatever was loaded before, so select every earlier file at once.</p>
+        </header>
+        <div class="body" style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center">
+            <button class="btn" type="button" id="priorBtn">Load earlier results (JSON)</button>
+            <button class="btn ghost" type="button" id="priorClear" hidden>Clear</button>
+          </div>
+          <input type="file" id="priorInput" accept=".json,application/json" multiple hidden>
+          <div id="priorStatus"></div>
         </div>
       </section>
 
@@ -891,13 +980,25 @@ table.grid td.name{color:var(--ink);font-weight:500}
   <form class="signin" id="signinForm">
     <h2>Sign in to annotate</h2>
     <p>Your name and email identify your work. Use the same email every time &mdash; that is how your annotations come back after a disconnect or a closed tab.</p>
-    <div class="row">
-      <label for="inName">Name</label>
-      <input type="text" id="inName" autocomplete="name" required placeholder="Hong Gil Dong">
+    <p class="namehint"><b>Write your real name in English</b>, family name first &mdash; the way it appears on your passport.</p>
+    <div class="row two">
+      <div class="row">
+        <label for="inFamily">Family name</label>
+        <input type="text" id="inFamily" autocomplete="family-name" required placeholder="Hong" lang="en" spellcheck="false" autocapitalize="words">
+      </div>
+      <div class="row">
+        <label for="inGiven">Given name</label>
+        <input type="text" id="inGiven" autocomplete="given-name" required placeholder="Gildong" lang="en" spellcheck="false" autocapitalize="words">
+      </div>
     </div>
     <div class="row">
       <label for="inEmail">Email</label>
       <input type="email" id="inEmail" autocomplete="email" required placeholder="you@korea.ac.kr">
+    </div>
+    <div class="row" id="goalRow">
+      <label>Your goal</label>
+      <div class="goalpick" id="goalPick" role="radiogroup" aria-label="Your goal"></div>
+      <span class="goalnote">How many finished QA you will write. You can change it later with <b>Switch</b>.</span>
     </div>
     <div id="signinErr"></div>
     <button class="btn primary" type="submit" style="justify-content:center;padding:9px">Start annotating</button>
@@ -937,7 +1038,7 @@ table.grid td.name{color:var(--ink);font-weight:500}
 window.MVQA = (function(){
 "use strict";
 
-var BACKEND_URL = "https://script.google.com/macros/s/AKfycbyDTAFDAzmsc7SvfFkuks2N_EuRR8iCBW2gH-0o6hvBFwhMjLE9EAZcbqm8oJby6Jld6g/exec";
+var BACKEND_URL = "PASTE_YOUR_WEB_APP_URL_HERE";
 
 /* ---------- link parameters: #k=<access code>, #backend=<url> ---------- */
 function hashParam(name){
@@ -1092,10 +1193,11 @@ DocRef.prototype.onSnapshot = function(cb, errCb){ return watch(this.path, false
 function CollectionRef(path, lim){ this.path = path; this._limit = lim || 0; }
 CollectionRef.prototype.limit = function(n){ return new CollectionRef(this.path, n); };
 CollectionRef.prototype.get = async function(){
-  var path = this.path, cacheable = path.lastIndexOf("pool/", 0) === 0, stamp = null;
+  var path = this.path, stamp = null;
+  var cacheable = path.lastIndexOf("pool/", 0) === 0 || path.lastIndexOf("prior/", 0) === 0;
   if(cacheable){
-    /* the page pool never changes inside a round, so it is fetched once per
-       browser and then read straight out of IndexedDB */
+    /* the page pool and the earlier results change rarely, so they are fetched
+       once per browser and then read straight out of IndexedDB until they do */
     try{
       var meta = await rpc({op:"colMeta", collection:path}, 3);
       var hit  = await box.get("pool:" + path + SCOPE);
@@ -1282,7 +1384,11 @@ return {
 var S = {
   db: null, downloads: null, dbReady: false,
   me: null,                 // {key,name,email}
-  dsId: null, target: 50, maxPerPage: 2, pagesCap: 0, slot: 1,
+  dsId: null, target: 50, targets: [50, 100], maxPerPage: 2, pagesCap: 0, slot: 1,
+  otherSecond: "done",      // when others may add the next QA: done | any | never
+  priorPolicy: "hide",      // pages from earlier rounds: hide | open
+  prior: [], priorByImg: {}, priorWork: {}, priorVersion: 0,
+  chunkCount: 0,
   items: [],                // reference examples, index-aligned
   work: {},                 // idx -> work doc
   annotators: {},           // key -> annotator doc
@@ -1336,7 +1442,7 @@ var pages = {guide:"page-guide", annotate:"page-annotate", admin:"page-admin"};
    attached to dataset uploads, setting changes and resets, and the server refuses those
    without it \u2014 so this is a real lock, not a door sign. */
 var LSA = "mvqa.admin.v2";
-var LSK = "mvqa.adminkey.v2";
+var LSAK = "mvqa.adminkey.v2";   /* LSK is already the identity key */
 /* The unlock belongs to one signed-in person in one browser session: switching accounts or
    closing the browser locks it again, so an annotator never inherits the console. */
 function adminUnlockKey(){ return S.me ? S.me.key : "anon"; }
@@ -1344,7 +1450,7 @@ function isAdminUnlocked(){
   try{ return sessionStorage.getItem(LSA) === adminUnlockKey(); }catch(e){ return false; }
 }
 function lockAdmin(){
-  try{ sessionStorage.removeItem(LSA); sessionStorage.removeItem(LSK); }catch(e){}
+  try{ sessionStorage.removeItem(LSA); sessionStorage.removeItem(LSAK); }catch(e){}
   try{ MVQA.setAdminKey(null); }catch(e){}
   if($("page-admin").getAttribute("data-active") === "true") goto("guide");
 }
@@ -1369,7 +1475,7 @@ $("adminForm").addEventListener("submit", async function(ev){
     return;
   }
   if(ok){
-    try{ sessionStorage.setItem(LSA, adminUnlockKey()); sessionStorage.setItem(LSK, pass); }catch(e){}
+    try{ sessionStorage.setItem(LSA, adminUnlockKey()); sessionStorage.setItem(LSAK, pass); }catch(e){}
     $("adminScrim").hidden = true;
     $("adminErr").innerHTML = "";
     goto("admin");
@@ -1400,23 +1506,59 @@ Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(b){
 });
 
 /* ============================ sign in ============================ */
+/* the goals the administrator offers; one number means there is nothing to choose */
+function parseTargets(v){
+  var out = [];
+  String(v == null ? "" : v).split(/[^0-9]+/).forEach(function(t){
+    var n = Number(t);
+    if(n > 0 && n <= 5000 && out.indexOf(n) < 0) out.push(n);
+  });
+  out.sort(function(a, b){ return a - b; });
+  return out.length ? out.slice(0, 4) : [50, 100];
+}
+function myTarget(){ return (S.me && Number(S.me.target)) || S.target; }
+function renderGoalPick(){
+  var host = $("goalPick");
+  if(!host) return;
+  host.innerHTML = "";
+  $("goalRow").hidden = S.targets.length < 2;
+  var cur = S.me ? Number(S.me.target) : 0;
+  S.targets.forEach(function(n){
+    var lab = el("label"); lab.setAttribute("data-v", String(n));
+    var inp = document.createElement("input");
+    inp.type = "radio"; inp.name = "goal"; inp.value = String(n); inp.checked = (n === cur);
+    lab.appendChild(inp); lab.appendChild(document.createTextNode(n + " QA"));
+    host.appendChild(lab);
+  });
+}
 function openSignin(){
+  renderGoalPick();
   var scrim = $("signinScrim"); scrim.hidden = false;
-  setTimeout(function(){ $("inName").focus(); }, 30);
+  setTimeout(function(){ $("inFamily").focus(); }, 30);
 }
 $("switchUser").addEventListener("click", function(){
-  if(S.me){ $("inName").value = S.me.name; $("inEmail").value = S.me.email; }
+  if(S.me){ $("inFamily").value = S.me.familyName || ""; $("inGiven").value = S.me.givenName || ""; $("inEmail").value = S.me.email; }
   openSignin();
 });
 $("signInBtn").addEventListener("click", function(){ openSignin(); });
+/* names are romanised on purpose: the dataset credits people in English */
+var NAME_OK = /^[A-Za-z][A-Za-z .'\-]*$/;
+function tidyName(s){ return String(s || "").replace(/\s+/g, " ").trim(); }
 $("signinForm").addEventListener("submit", function(ev){
   ev.preventDefault();
-  var name = $("inName").value.trim();
+  var family = tidyName($("inFamily").value);
+  var given = tidyName($("inGiven").value);
   var email = $("inEmail").value.trim().toLowerCase();
+  function err(m){ $("signinErr").innerHTML = '<div class="notice err">' + m + '</div>'; }
   $("signinErr").innerHTML = "";
-  if(name.length < 2){ $("signinErr").innerHTML = '<div class="notice err">Enter your full name.</div>'; return; }
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ $("signinErr").innerHTML = '<div class="notice err">That email address does not look right. Check it and try again.</div>'; return; }
-  setIdentity({key: seg(email), name: name, email: email});
+  if(!family || !given){ err("Enter both your family name and your given name."); return; }
+  if(/[^\x00-\x7F]/.test(family + given)){ err("Please write your name in English letters &mdash; for example <b>Hong</b> / <b>Gildong</b>, not 홍길동."); return; }
+  if(!NAME_OK.test(family) || !NAME_OK.test(given)){ err("Names may use English letters, spaces, hyphens and apostrophes only."); return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err("That email address does not look right. Check it and try again."); return; }
+  var picked = document.querySelector('#goalPick input[name="goal"]:checked');
+  if(S.targets.length > 1 && !picked){ err("Choose your goal: " + S.targets.join(" or ") + " QA."); return; }
+  var target = picked ? Number(picked.value) : S.targets[0];
+  setIdentity({key: seg(email), name: family + " " + given, familyName: family, givenName: given, email: email, target: target});
   $("signinScrim").hidden = true;
 });
 function setIdentity(me){
@@ -1439,7 +1581,8 @@ function setIdentity(me){
 }
 try{
   var stored = JSON.parse(localStorage.getItem(LSK) || "null");
-  if(stored && stored.email) setIdentity(stored);
+  /* identities saved before names were split into family/given must sign in again */
+  if(stored && stored.email && stored.familyName && stored.givenName) setIdentity(stored);
 }catch(e){}
 
 /* ============================ db wiring ============================ */
@@ -1449,7 +1592,10 @@ function workCol(dsId){ return "work/" + dsId + "/items"; }
 /* A page can carry more than one QA. Slot 1 keeps the plain "<idx>" document id, so every
    annotation made before slots existed stays exactly where it is and reads as QA 1. */
 function workId(idx, slot){ return slot > 1 ? (idx + "-" + slot) : String(idx); }
-function getWork(idx, slot){ return S.work[workId(idx, slot)] || null; }
+function getWork(idx, slot){
+  var id = workId(idx, slot);
+  return S.work[id] || S.priorWork[id] || null;   // earlier-round QA sit in slots as read-only work
+}
 function slotsOf(idx){
   var out = [];
   for(var s = 1; s <= Math.max(S.maxPerPage, 2); s++){
@@ -1463,6 +1609,136 @@ function pageOwner(idx){
   var list = slotsOf(idx);
   for(var i=0;i<list.length;i++) if(list[i].w.annotatorKey) return list[i].w;
   return null;
+}
+
+/* ---- per-QA ownership ------------------------------------------------------
+   A QA belongs to whoever wrote it and nobody else may change it. A page is no
+   longer one person's: once its QA are in, someone else may add the next one
+   (S.otherSecond says when), each person owning only what they wrote.       */
+function myKey(){ return S.me ? S.me.key : null; }
+function slotOwner(idx, slot){ var w = getWork(idx, slot); return (w && w.annotatorKey) ? w : null; }
+function iHold(idx){
+  var k = myKey();
+  if(!k) return false;
+  return slotsOf(idx).some(function(x){ return x.w.annotatorKey === k; });
+}
+function firstFree(idx){
+  for(var s = 1; s <= S.maxPerPage; s++) if(!slotOwner(idx, s)) return s;
+  return 0;
+}
+/* is there a QA slot on this page that a newcomer could start? */
+function joinable(idx){
+  var owned = slotsOf(idx).filter(function(x){ return x.w.annotatorKey; });
+  if(!owned.length) return true;
+  if(!firstFree(idx)) return false;
+  if(S.otherSecond === "never") return false;
+  if(S.otherSecond === "any") return true;
+  return owned.every(function(x){ return x.w.status === "done"; });
+}
+/* typing comes before the first save: a local draft on an untouched page counts as holding it */
+function draftingFresh(idx){
+  if(slotsOf(idx).some(function(x){ return x.w.annotatorKey; })) return false;
+  var d = S.me ? readLocalDraft(idx, 1) : null;
+  return !!(d && !isBlank(d));
+}
+function mayTakeSlot(idx, slot){
+  if(!S.me || idx < 0 || slot < 1 || slot > S.maxPerPage) return false;
+  var o = slotOwner(idx, slot);
+  if(o) return o.annotatorKey === S.me.key;
+  if(iHold(idx) || draftingFresh(idx)) return true;
+  return slot === firstFree(idx) && joinable(idx);
+}
+function ownerLabel(w){
+  if(!w) return "another annotator";
+  if(w.prior) return w.annotatorName ? (w.annotatorName + " (earlier round)") : "an earlier round";
+  return w.annotatorName || "another annotator";
+}
+function shortOwner(w){
+  if(w.prior) return "earlier";
+  var n = String(w.annotatorName || "").trim().split(/\s+/);
+  return n[0] ? n.slice(0, 2).join(" ") : "other";
+}
+/* why an empty QA slot is closed to this annotator, in words */
+function whyClosed(idx){
+  var owned = slotsOf(idx).filter(function(x){ return x.w.annotatorKey; });
+  if(!firstFree(idx)) return "Every QA on this page is taken.";
+  if(S.otherSecond === "never") return "This page belongs to " + ownerLabel(owned[0] && owned[0].w) + ".";
+  var open = owned.filter(function(x){ return x.w.status !== "done"; });
+  if(open.length) return ownerLabel(open[0].w) + " is still writing QA " + open[0].slot +
+    " on this page. Once it is marked complete, you can add another QA here.";
+  return "This QA is not open to you.";
+}
+function joinHint(idx){
+  if(!firstFree(idx) || S.otherSecond !== "done") return "";
+  var open = slotsOf(idx).some(function(x){ return x.w.annotatorKey && x.w.status !== "done"; });
+  return open ? " Once it is marked complete, you can add another QA on this page." : "";
+}
+/* the QA to show when a page is opened */
+function defaultSlot(idx){
+  var k = myKey();
+  if(k){
+    var mine = slotsOf(idx).filter(function(x){ return x.w.annotatorKey === k; });
+    for(var i = 0; i < mine.length; i++) if(mine[i].w.status !== "done") return mine[i].slot;
+    if(mine.length) return mine[0].slot;
+  }
+  if(!slotsOf(idx).some(function(x){ return x.w.annotatorKey; })) return 1;
+  var f = firstFree(idx);
+  return (f && joinable(idx)) ? f : 1;
+}
+
+/* ---- earlier rounds ---------------------------------------------------------
+   Completed QA from a previous export, matched to this round by gt_image. They
+   either hide the page, or sit in its first slots as someone else's finished
+   QA, so the page only takes what room is left.                             */
+function normImg(s){ return base(String(s || "")).toLowerCase(); }
+function stemOf(s){ return base(String(s || "")).replace(/\.[A-Za-z0-9]+$/, ""); }
+function hasCurrentWork(idx){
+  for(var s = 1; s <= 5; s++) if(S.work[workId(idx, s)]) return true;
+  return false;
+}
+function priorRowsOf(idx){
+  var it = S.items[idx];
+  return (it && S.priorByImg[normImg(it.gt_image)]) || [];
+}
+/* a page with current-round work is never hidden: that work must stay reachable */
+function isPriorHidden(idx){
+  return S.priorPolicy !== "open" && priorRowsOf(idx).length > 0 && !hasCurrentWork(idx);
+}
+function rebuildPrior(){
+  S.priorByImg = {};
+  (S.prior || []).forEach(function(r){
+    var k = normImg(r.gt_image);
+    (S.priorByImg[k] = S.priorByImg[k] || []).push(r);
+  });
+  S.priorWork = {};
+  if(S.priorPolicy !== "open") return;
+  S.items.forEach(function(it, i){
+    var rows = S.priorByImg[normImg(it.gt_image)];
+    if(!rows) return;
+    rows.slice().sort(function(a, b){ return (a.qa_index || 1) - (b.qa_index || 1); }).forEach(function(r, k){
+      var slot = k + 1;
+      if(slot > 5) return;
+      S.priorWork[workId(i, slot)] = {
+        idx: i, slot: slot, prior: true, status: "done",
+        annotatorKey: "prior:" + (r.email || r.name || "earlier"),
+        annotatorName: r.name || "",
+        question: r.query || "", answer: r.answer || "", evidenceText: r.text || "",
+        imageDescription: r.image_description || "", bbox: Array.isArray(r.bbox) ? r.bbox : null
+      };
+    });
+  });
+}
+async function loadPrior(){
+  if(!S.db){ rebuildPrior(); return; }
+  try{
+    var snap = await S.db.collection("prior/rows").get();
+    var chunks = snap.docs.map(function(d){ return d.data() || {}; })
+      .sort(function(a, b){ return (Number(a.n) || 0) - (Number(b.n) || 0); });
+    var rows = [];
+    chunks.forEach(function(c){ rows = rows.concat(c.rows || []); });
+    S.prior = rows;
+  }catch(e){ /* keep what we had */ }
+  rebuildPrior();
 }
 function myPageCount(){
   if(!S.me) return 0;
@@ -1496,7 +1772,7 @@ function capReached(){ return S.pagesCap > 0 && myPageCount() >= S.pagesCap; }
   }
   S.db = MVQA.db;
   S.dbReady = true;
-  try{ if(isAdminUnlocked()) MVQA.setAdminKey(sessionStorage.getItem(LSK) || null); }catch(e){}
+  try{ if(isAdminUnlocked()) MVQA.setAdminKey(sessionStorage.getItem(LSAK) || null); }catch(e){}
   MVQA.onConnectionChange(function(ok){
     if(ok){ setSave("saved","Back online"); toast("Reconnected \u2014 anything held in this browser is on its way up.", "ok"); syncPendingDrafts(); }
     else  { setSave("offline","Offline \u2014 kept in this browser"); }
@@ -1528,9 +1804,17 @@ function capReached(){ return S.pagesCap > 0 && myPageCount() >= S.pagesCap; }
     var c = snap.data();
     applyConfig(c);
     renderProgress(); renderSlots(); renderRail();
+    if(S.cur >= 0) reflectClaim();
     if(c.dsId && c.dsId !== S.dsId){
       S.dsId = c.dsId; S.work = {}; S.cur = -1;
-      loadPool().then(function(){ subscribeWork(); renderAll(); });
+      loadPool().then(function(){ rebuildPrior(); subscribeWork(); renderAll(); });
+    }else if(c.dsId && Number(c.itemCount) > S.items.length){
+      /* pages were added to this round: fetch them and keep everything else */
+      loadPool().then(function(){ rebuildPrior(); renderAll(); });
+    }
+    if((Number(c.priorVersion) || 0) !== S.priorVersion){
+      S.priorVersion = Number(c.priorVersion) || 0;
+      loadPrior().then(function(){ renderAll(); });
     }
   }, function(){});
   if(S.me) registerAnnotator();
@@ -1541,12 +1825,19 @@ function capReached(){ return S.pagesCap > 0 && myPageCount() >= S.pagesCap; }
 /* the three numbers the administrator can raise mid-study */
 function applyConfig(c){
   c = c || {};
-  S.target     = Number(c.target) > 0 ? Number(c.target) : 50;
+  S.targets    = parseTargets(Array.isArray(c.targets) ? c.targets.join(",") : c.targets);
+  S.target     = S.targets[0];
   S.maxPerPage = Number(c.maxPerPage) > 0 ? Math.min(5, Number(c.maxPerPage)) : 2;
   S.pagesCap   = Number(c.pagesPerAnnotator) > 0 ? Number(c.pagesPerAnnotator) : 0;
-  $("targetInput").value = S.target;
+  $("targetInput").value = S.targets.join(", ");
+  renderGoalPick();
   $("maxPerPageInput").value = S.maxPerPage;
   $("pagesCapInput").value = S.pagesCap || "";
+  S.otherSecond = ["done","any","never"].indexOf(c.otherSecond) >= 0 ? c.otherSecond : "done";
+  S.priorPolicy = c.priorPolicy === "open" ? "open" : "hide";
+  $("otherSecondInput").value = S.otherSecond;
+  $("priorPolicyInput").value = S.priorPolicy;
+  rebuildPrior();
   if(S.slot > S.maxPerPage) S.slot = 1;
 }
 
@@ -1560,6 +1851,7 @@ async function loadPool(){
       chunks.push({n: Number(body.n)||0, items: body.items||[]});
     });
     chunks.sort(function(a,b){ return a.n - b.n; });
+    S.chunkCount = chunks.length ? chunks[chunks.length - 1].n + 1 : 0;
     var all = [];
     chunks.forEach(function(c){ all = all.concat(c.items); });
     S.items = all;
@@ -1602,6 +1894,8 @@ async function registerAnnotator(){
     var prev = snap.exists ? snap.data() : {};
     await ref.set({
       key: S.me.key, name: S.me.name, email: S.me.email,
+      familyName: S.me.familyName || "", givenName: S.me.givenName || "",
+      target: Number(S.me.target) || 0,
       skipped: prev.skipped || [],
       joinedAt: prev.joinedAt || nowISO(),
       lastSeen: nowISO()
@@ -1615,17 +1909,17 @@ function mySkips(){
 
 /* ============================ item status ============================ */
 function statusOf(idx){
-  var owner = pageOwner(idx);
-  if(owner){
-    if(!S.me || owner.annotatorKey !== S.me.key) return "taken";
-    var list = slotsOf(idx);
-    var allDone = list.length > 0 && list.every(function(x){ return x.w.status === "done"; });
-    return allDone ? "done" : "mine";
-  }
+  if(isPriorHidden(idx)) return "prior";
+  var list = slotsOf(idx), k = myKey();
+  var mine = k ? list.filter(function(x){ return x.w.annotatorKey === k; }) : [];
+  if(mine.length) return mine.every(function(x){ return x.w.status === "done"; }) ? "done" : "mine";
   if(S.me && mySkips().indexOf(idx) >= 0) return "skipped";
-  return "available";
+  var owned = list.filter(function(x){ return x.w.annotatorKey; });
+  if(!owned.length) return "available";
+  return joinable(idx) ? "open2" : "taken";
 }
-var STATUS_LABEL = {available:"Open", mine:"In progress", done:"Completed", taken:"Taken", skipped:"Skipped"};
+var STATUS_LABEL = {available:"Open", mine:"In progress", done:"Completed", taken:"Taken", skipped:"Skipped",
+                    open2:"Room for another QA", prior:"Done in an earlier round"};
 
 /* ============================ rail ============================ */
 function isNarrow(){ return window.innerWidth <= 1240 && window.innerWidth > 900; }
@@ -1683,7 +1977,8 @@ function renderRail(){
   var shown = 0;
   S.items.forEach(function(it, i){
     var st = statusOf(i);
-    if(S.filter !== "all" && S.filter !== st) return;
+    if(st === "prior") return;   // annotated in an earlier round and set to hide
+    if(S.filter !== "all" && S.filter !== st && !(S.filter === "available" && st === "open2")) return;
     shown++;
     var row = el("button","itemrow");
     row.type = "button";
@@ -1692,7 +1987,7 @@ function renderRail(){
     row.appendChild(el("span","idx", String(i+1).padStart(3,"0")));
     var nm = el("div","nm");
     nm.appendChild(el("div","t", shortName(it.gt_image)));
-    nm.appendChild(el("div","b", [it.brand, it.source].filter(Boolean).join(" · ")));
+    nm.appendChild(el("div","b", [it.brand, it.source].filter(Boolean).join(" · ") + (it.extra ? "  ·  extra" : "")));
     row.appendChild(nm);
     var n = slotsOf(i).length;
     if(n > 1){
@@ -1714,10 +2009,10 @@ function shortName(f){
 }
 
 function renderProgress(){
-  var done = myQaCount(true);
-  var pct = S.target ? Math.min(100, Math.round(done / S.target * 100)) : 0;
+  var done = myQaCount(true), goal = myTarget();
+  var pct = goal ? Math.min(100, Math.round(done / goal * 100)) : 0;
   $("progDone").textContent = done;
-  $("progOf").textContent = " / " + S.target + " QA completed";
+  $("progOf").textContent = " / " + goal + " QA completed";
   $("progPct").textContent = pct + "%";
   $("progBar").style.width = pct + "%";
   var pages = myPageCount();
@@ -1813,7 +2108,7 @@ function selectItem(i){
   if(i === S.cur) return;
   flushSave(true);
   S.cur = i;
-  S.slot = 1;
+  S.slot = defaultSlot(i);
   S.bbox = null;
   if(isNarrow()) setRail(false);
   renderRail();
@@ -1825,7 +2120,7 @@ function selectItem(i){
 function selectNextOpen(){
   for(var i=0;i<S.items.length;i++){
     var st = statusOf(i);
-    if(st === "available" || st === "mine"){ selectItem(i); return true; }
+    if(st === "available" || st === "mine" || st === "open2"){ selectItem(i); return true; }
   }
   toast("No open pages left in the pool.", null);
   return false;
@@ -1837,7 +2132,7 @@ $("addQaBtn").addEventListener("click", function(){
 $("nextBtn").addEventListener("click", function(){
   for(var i=S.cur+1;i<S.items.length;i++){
     var st = statusOf(i);
-    if(st === "available" || st === "mine"){ selectItem(i); return; }
+    if(st === "available" || st === "mine" || st === "open2"){ selectItem(i); return; }
   }
   selectNextOpen();
 });
@@ -1941,9 +2236,23 @@ document.addEventListener("keyup", function(e){
 window.addEventListener("blur", function(){ S.space = false; reflectCursor(); });
 function wantsPan(ev){ return S.tool === "pan" || S.space || ev.button === 1; }
 
+function drawGhosts(ov){
+  if(S.cur < 0) return;
+  slotsOf(S.cur).forEach(function(x){
+    if(x.slot === S.slot) return;
+    var b = x.w.bbox;
+    if(!Array.isArray(b) || b.length !== 4) return;
+    var g = el("div","ghostbox");
+    g.style.left = (b[0]/10) + "%"; g.style.top = (b[1]/10) + "%";
+    g.style.width = ((b[2]-b[0])/10) + "%"; g.style.height = ((b[3]-b[1])/10) + "%";
+    g.appendChild(el("span","tag","QA " + x.slot));
+    ov.appendChild(g);
+  });
+}
 function drawBox(){
   var ov = $("overlay");
   ov.innerHTML = "";
+  drawGhosts(ov);
   var readout = $("bboxReadout");
   if(!S.bbox){
     readout.className = "bboxreadout empty";
@@ -2050,50 +2359,48 @@ function renderSlots(){
   bar.innerHTML = "";
   if(S.cur < 0 || !S.items[S.cur]) return;
   if(S.maxPerPage <= 1) return;
-
   var list = slotsOf(S.cur);
-  var owner = pageOwner(S.cur);
-  var mine = !owner || (S.me && owner.annotatorKey === S.me.key);
   var highest = list.length ? list[list.length-1].slot : 0;
-
+  var k = myKey();
   bar.appendChild(el("span","lbl","QA on this page"));
   // the slot being written counts even before it has been saved once
   var shown = Math.max(highest, S.slot, 1);
   for(var s = 1; s <= shown; s++){
     (function(slot){
       var w = getWork(S.cur, slot);
+      var theirs = !!(w && w.annotatorKey && w.annotatorKey !== k);
       var b = el("button","slotbtn");
       b.type = "button";
       b.setAttribute("aria-pressed", String(slot === S.slot));
       b.setAttribute("data-state", w ? (w.status === "done" ? "done" : "draft") : "empty");
+      if(theirs){ b.setAttribute("data-theirs", "true"); b.title = "Written by " + ownerLabel(w) + " \u2014 read only"; }
       b.appendChild(el("span","st"));
-      b.appendChild(document.createTextNode("QA " + slot));
+      b.appendChild(document.createTextNode("QA " + slot + (theirs ? " \u00b7 " + shortOwner(w) : "")));
       b.addEventListener("click", function(){ selectSlot(slot); });
       bar.appendChild(b);
     })(s);
   }
-  // room for one more once the highest slot has something in it — saved or still only local
-  if(mine && canAddSlot()){
+  var next = canAddSlot();
+  if(next){
     var add = el("button","slotbtn add");
     add.type = "button";
-    add.textContent = "+ Add QA " + (shown + 1);
+    add.textContent = "+ Add QA " + next;
     add.title = "Write another question for this same page";
-    add.addEventListener("click", function(){ selectSlot(shown + 1); });
+    add.addEventListener("click", function(){ selectSlot(next); });
     bar.appendChild(add);
   }
 }
 /* the next empty slot on this page, or 0 when there is no room for one */
 function canAddSlot(){
-  if(S.cur < 0 || S.maxPerPage <= 1) return 0;
-  var owner = pageOwner(S.cur);
-  if(owner && (!S.me || owner.annotatorKey !== S.me.key)) return 0;
+  if(S.cur < 0 || S.maxPerPage <= 1 || !S.me) return 0;
   var list = slotsOf(S.cur);
   var highest = Math.max(1, list.length ? list[list.length-1].slot : 0);
   if(highest >= S.maxPerPage) return 0;
-  var last = getWork(S.cur, highest) || (S.me ? readLocalDraft(S.cur, highest) : null);
+  var last = getWork(S.cur, highest) || readLocalDraft(S.cur, highest);
   if(!last || isBlank(last)) return 0;
   var next = highest + 1;
-  return next === S.slot ? 0 : next;   // already sitting on the empty new slot
+  if(next === S.slot) return 0;   // already sitting on the empty new slot
+  return mayTakeSlot(S.cur, next) ? next : 0;
 }
 function selectSlot(slot){
   if(slot === S.slot) return;
@@ -2131,25 +2438,33 @@ function renderForm(){
   // reference example
   var rb = $("refBody");
   rb.innerHTML = "";
-  addRef(rb, "query_id", it.query_id);
-  addRef(rb, "brand / source", [it.brand, it.source].filter(Boolean).join("  ·  "));
-  addRef(rb, "question", it.query);
-  addRef(rb, "answer", it.answer);
-  var evd = it.evidence || {};
-  addRef(rb, "text evidence", evd.text);
-  addRef(rb, "image evidence", evd.image_description);
-  addRef(rb, "bbox", Array.isArray(evd.bbox) ? "[" + evd.bbox.join(", ") + "]  " + (evd.bbox_format || "") : null);
-  var acts = el("div", null);
-  acts.style.cssText = "display:flex;gap:7px;flex-wrap:wrap;margin-top:2px";
-  var showBtn = el("button","btn sm ghost","Show reference box on page");
-  showBtn.type = "button";
-  showBtn.addEventListener("click", function(){
-    if(!Array.isArray(evd.bbox) || evd.bbox.length !== 4){ toast("This reference has no bounding box.", null); return; }
-    S.bbox = evd.bbox.map(Number); drawBox(); updateChecklist(); queueSave();
-    toast("Reference box copied in — adjust it to your own target.", null);
-  });
-  acts.appendChild(showBtn);
-  rb.appendChild(acts);
+  $("refTitle").textContent = it.extra ? "No reference example \u2014 extra page" : "Reference example for this page";
+  if(it.extra){
+    var xn = el("div","notice info");
+    xn.innerHTML = "<span>&#9432;</span><span><b>This is an extra page without a reference example.</b> Write your QA from the page itself. The ambiguous spans below, if any, mark text on this page that only the picture can resolve.</span>";
+    rb.appendChild(xn);
+    addRef(rb, "brand / source", [it.brand, it.source].filter(Boolean).join("  \u00b7  "));
+  }else{
+    addRef(rb, "query_id", it.query_id);
+    addRef(rb, "brand / source", [it.brand, it.source].filter(Boolean).join("  ·  "));
+    addRef(rb, "question", it.query);
+    addRef(rb, "answer", it.answer);
+    var evd = it.evidence || {};
+    addRef(rb, "text evidence", evd.text);
+    addRef(rb, "image evidence", evd.image_description);
+    addRef(rb, "bbox", Array.isArray(evd.bbox) ? "[" + evd.bbox.join(", ") + "]  " + (evd.bbox_format || "") : null);
+    var acts = el("div", null);
+    acts.style.cssText = "display:flex;gap:7px;flex-wrap:wrap;margin-top:2px";
+    var showBtn = el("button","btn sm ghost","Show reference box on page");
+    showBtn.type = "button";
+    showBtn.addEventListener("click", function(){
+      if(!Array.isArray(evd.bbox) || evd.bbox.length !== 4){ toast("This reference has no bounding box.", null); return; }
+      S.bbox = evd.bbox.map(Number); drawBox(); updateChecklist(); queueSave();
+      toast("Reference box copied in — adjust it to your own target.", null);
+    });
+    acts.appendChild(showBtn);
+    rb.appendChild(acts);
+  }
 
   $("refBlock").open = false;
   renderSpans(it.gt_page_ambiguous_spans);
@@ -2220,67 +2535,88 @@ function addRef(host, k, v){
 }
 
 function reflectClaim(){
-  var w = getWork(S.cur, S.slot);
-  var owner = pageOwner(S.cur);
   var host = $("claimNotice");
   host.innerHTML = "";
-  var locked = !!(owner && (!S.me || owner.annotatorKey !== S.me.key));
-  var done = !!(w && w.status === "done" && S.me && w.annotatorKey === S.me.key);
-  var ro = locked;
-  // a page allowance that is already spent blocks new pages, never pages already claimed
-  var blocked = !locked && !owner && capReached();
-  if(blocked) ro = true;
+  var k = myKey();
+  var w = getWork(S.cur, S.slot);
+  var so = slotOwner(S.cur, S.slot);
+  var theirs = !!(so && so.annotatorKey !== k);
+  var closed = !theirs && !so && !!S.me && S.cur >= 0 && !mayTakeSlot(S.cur, S.slot);
+  var blocked = !theirs && !closed && !so && S.cur >= 0 && !iHold(S.cur) && capReached();
+  var ro = theirs || closed || blocked;
   FIELDS.forEach(function(p){ $(p[0]).readOnly = ro; $(p[0]).style.opacity = ro ? ".6" : "1"; });
   $("completeBtn").disabled = ro;
   $("skipBtn").disabled = ro;
+  var done = !!(w && w.status === "done" && k && w.annotatorKey === k);
   // offer the delete whenever there is anything of mine to throw away, server-side or local
-  var minesOnServer = !!(w && S.me && w.annotatorKey === S.me.key);
+  var minesOnServer = !!(w && k && w.annotatorKey === k);
   var draft = S.me ? readLocalDraft(S.cur, S.slot) : null;
-  $("releaseBtn").hidden = !(minesOnServer || (!locked && draft && !isBlank(draft)));
+  $("releaseBtn").hidden = !(minesOnServer || (!ro && !so && draft && !isBlank(draft)));
   $("releaseBtn").textContent = S.maxPerPage > 1 ? ("Delete QA " + S.slot) : "Delete my annotation";
   var nextSlot = canAddSlot();
   $("addQaBtn").hidden = !nextSlot;
   if(nextSlot) $("addQaBtn").textContent = "+ Add QA " + nextSlot;
-  if(locked){
-    var n = el("div","notice warn");
-    n.innerHTML = "<span>&#9888;</span><span>" + esc(owner.annotatorName || "Another annotator") + " claimed this page. Pick a different one.</span>";
-    host.appendChild(n);
-  }else if(blocked){
-    var cn = el("div","notice warn");
-    cn.innerHTML = "<span>&#9888;</span><span>You have used all " + S.pagesCap + " of your pages. Finish or release one, or ask the administrator to raise your page allowance.</span>";
-    host.appendChild(cn);
-  }else if(done){
-    var next = canAddSlot();
-    var d = el("div","notice info");
-    d.style.cssText = "flex-wrap:wrap;align-items:center";
-    var txt = el("span", null, next
-      ? ("QA " + S.slot + " is complete. This page can take another question — a different element on the same page.")
-      : "Marked complete. Editing it again keeps it complete.");
-    d.appendChild(el("span", null, "✓"));
-    d.appendChild(txt);
-    if(next){
-      var cta = el("button","btn primary sm", "+ Add QA " + next);
-      cta.type = "button";
-      cta.style.marginLeft = "auto";
-      cta.addEventListener("click", function(){ selectSlot(next); });
-      d.appendChild(cta);
+
+  function note(kind, icon, html, cta){
+    var n = el("div","notice " + kind);
+    n.style.cssText = "flex-wrap:wrap;align-items:center";
+    n.innerHTML = "<span>" + icon + "</span><span>" + html + "</span>";
+    if(cta){
+      var b = el("button","btn primary sm", "+ Add QA " + cta);
+      b.type = "button"; b.style.marginLeft = "auto";
+      b.addEventListener("click", function(){ selectSlot(cta); });
+      n.appendChild(b);
     }
-    host.appendChild(d);
+    host.appendChild(n);
+  }
+
+  if(theirs){
+    note("warn", "&#128274;", "QA " + S.slot + " on this page was written by <b>" + esc(ownerLabel(so)) +
+      "</b>. You can read it, but only they can change it." +
+      (nextSlot ? " You can add your own QA about a different element." : esc(joinHint(S.cur))), nextSlot);
+  }else if(closed){
+    note("warn", "&#9888;", esc(whyClosed(S.cur)));
+  }else if(blocked){
+    note("warn", "&#9888;", "You have used all " + S.pagesCap + " of your pages. Finish or release one, or ask the administrator to raise your page allowance.");
+  }else if(done){
+    note("info", "\u2713", nextSlot
+      ? ("QA " + S.slot + " is complete. This page can take another question \u2014 a different element on the same page.")
+      : "Marked complete. Editing it again keeps it complete.", nextSlot);
     $("completeBtn").textContent = "Completed";
+  }else if(!so && S.cur >= 0){
+    // joining: say what is already on this page so the new QA picks something else
+    var others = slotsOf(S.cur).filter(function(x){ return x.slot !== S.slot && x.w.annotatorKey && x.w.annotatorKey !== k; });
+    if(others.length){
+      var o = others[0].w;
+      note("info", "&#9432;", "You are adding QA " + S.slot + " to a page where <b>" + esc(ownerLabel(o)) +
+        "</b> already wrote QA " + others[0].slot + (o.question ? ": <i>" + esc(o.question) + "</i>" : "") +
+        ". Choose a <b>different visual element</b> \u2014 their box is drawn dashed on the page.");
+    }
   }
   if(!done) $("completeBtn").textContent = "Mark complete";
 }
 function ensureEditable(){
   if(!S.me){ openSignin(); return false; }
-  var owner = pageOwner(S.cur);
-  if(owner && owner.annotatorKey !== S.me.key){ toast("This page belongs to another annotator.", "err"); return false; }
-  if(!owner && capReached()){
+  var o = slotOwner(S.cur, S.slot);
+  if(o && o.annotatorKey !== S.me.key){
+    toast("QA " + S.slot + " on this page was written by " + ownerLabel(o) + " and cannot be changed.", "err");
+    return false;
+  }
+  if(!o && !mayTakeSlot(S.cur, S.slot)){ toast(whyClosed(S.cur), "err"); return false; }
+  if(!iHold(S.cur) && capReached()){
     toast("You have used all " + S.pagesCap + " of your pages. Ask the administrator to raise your allowance.", "err");
     return false;
   }
   return true;
 }
 
+/* words that point at the manual rather than the product; a warning, never a block */
+var LAYOUT_WORDS = /\b(manuals?|figures?|pictures?|illustrations?|diagrams?|drawings?|photos?|pages?)\b|매뉴얼|설명서|그림|페이지|사진|도면|삽화/gi;
+function manualLayoutWords(q){
+  var hits = {};
+  String(q || "").replace(LAYOUT_WORDS, function(w){ hits[w.toLowerCase()] = 1; return w; });
+  return Object.keys(hits);
+}
 function updateChecklist(){
   var it = S.items[S.cur] || {};
   var q = $("fQuestion").value.trim();
@@ -2366,9 +2702,10 @@ async function flushSave(immediate){
   if(isBlank(d)){ return; }
   writeLocalDraft(d);
   if(!S.db || !S.dsId){ setSave("offline","Saved in this browser only"); return; }
-  var owner = pageOwner(d.idx);
-  if(owner && owner.annotatorKey !== S.me.key){ setSave("offline","Page taken — not saved"); return; }
-  if(!owner && capReached()){ setSave("offline","Page allowance used up"); return; }
+  var so = slotOwner(d.idx, d.slot);
+  if(so && so.annotatorKey !== S.me.key){ setSave("offline","Not yours — not saved"); return; }
+  if(!so && !mayTakeSlot(d.idx, d.slot)){ setSave("offline","Not open to you — kept in this browser"); return; }
+  if(!iHold(d.idx) && capReached()){ setSave("offline","Page allowance used up"); return; }
   var docId = workId(d.idx, d.slot);
   var w = S.work[docId];
   var gen = S.gen[docId] || 0;
@@ -2377,7 +2714,7 @@ async function flushSave(immediate){
       var got = await claim(d.idx, d.slot);
       if(!got.ok){
         setSave("offline","Page taken — not saved");
-        toast(got.by ? (got.by + " claimed this page a moment ago. Your text was kept locally.") : "This page was just claimed by someone else.", "err");
+        toast(got.by ? (got.by + " is still working on this page \u2014 your text was kept in this browser.") : "Someone else just took this QA. Your text was kept in this browser.", "err");
         reflectClaim();
         return;
       }
@@ -2386,6 +2723,7 @@ async function flushSave(immediate){
     if((S.gen[docId] || 0) !== gen) return;   // deleted while this save was in flight
     var body = Object.assign({}, w, d, {
       annotatorKey: S.me.key, annotatorName: S.me.name, annotatorEmail: S.me.email,
+      annotatorFamily: S.me.familyName || "", annotatorGiven: S.me.givenName || "",
       status: (w && w.status === "done") ? "done" : "draft"
     });
     await S.db.doc(workCol(S.dsId) + "/" + docId).set(body);
@@ -2411,13 +2749,27 @@ async function claim(idx, slot){
   if(cur && cur.annotatorKey && cur.annotatorKey !== S.me.key){
     return {ok:false, by: cur.annotatorName};
   }
-  // a second QA is only ever added to a page this annotator already holds
-  if(slot > 1){
-    var owner = pageOwner(idx);
-    if(owner && owner.annotatorKey !== S.me.key) return {ok:false, by: owner.annotatorName};
+  // joining somebody else's page: check the rule against the server, not a list up to 30 s old
+  var known = slotsOf(idx).filter(function(x){
+    return x.slot !== slot && x.w.annotatorKey && x.w.annotatorKey !== S.me.key;
+  });
+  if(known.length && !iHold(idx)){
+    var others = [];
+    for(var q = 0; q < known.length; q++){
+      var kw = known[q].w;
+      if(kw.prior){ others.push(kw); continue; }
+      try{
+        var fresh = await S.db.doc(workCol(S.dsId) + "/" + workId(idx, known[q].slot)).get();
+        if(fresh.exists && fresh.data() && fresh.data().annotatorKey) others.push(fresh.data());
+      }catch(e){ others.push(kw); }
+    }
+    var allowed = !others.length || S.otherSecond === "any" ||
+      (S.otherSecond !== "never" && others.every(function(o){ return o.status === "done"; }));
+    if(!allowed) return {ok:false, by: others[0].annotatorName};
   }
   var doc = {
     idx: idx, slot: slot, annotatorKey: S.me.key, annotatorName: S.me.name, annotatorEmail: S.me.email,
+    annotatorFamily: S.me.familyName || "", annotatorGiven: S.me.givenName || "",
     status: "draft", claimedAt: nowISO()
   };
   await ref.set(Object.assign({}, cur || {}, doc));
@@ -2496,6 +2848,10 @@ $("completeBtn").addEventListener("click", async function(){
       return;
     }
   }
+  var layout = manualLayoutWords($("fQuestion").value);
+  if(layout.length && !confirm("Your question mentions \u201c" + layout.join("\u201d, \u201c") + "\u201d.\n\n" +
+      "Questions describe the product as the person using it sees it \u2014 not places on the manual page " +
+      "(no \u201cthe figure at the top-left of the manual\u201d).\n\nMark complete anyway?")) return;
   await flushSave(true);
   if(!S.db || !S.dsId){ toast("Saved in this browser. It will be submitted once the server is reachable.", "err"); return; }
   var docId = workId(S.cur, S.slot);
@@ -2547,14 +2903,14 @@ $("skipBtn").addEventListener("click", async function(){
 
 $("releaseBtn").addEventListener("click", async function(){
   if(S.cur < 0 || !S.me) return;
-  var owner = pageOwner(S.cur);
-  if(owner && owner.annotatorKey !== S.me.key) return;
+  var so = slotOwner(S.cur, S.slot);
+  if(so && so.annotatorKey !== S.me.key) return;
   var idx = S.cur, slot = S.slot, docId = workId(idx, slot);
   var w = S.work[docId];
   var others = slotsOf(idx).filter(function(x){ return x.slot !== slot; }).length;
   var label = S.maxPerPage > 1 ? ("QA " + slot + " for this page") : "your annotation for this page";
   if(!confirm("Delete " + label + "?\n\nEverything you typed here is discarded" +
-      (others ? ", and the page stays yours for the other QA on it." : " and the page goes back into the pool for anyone to claim.") +
+      (others ? ". The other QA on this page are not affected." : " and the page goes back into the pool for anyone to claim.") +
       "\n\nThis cannot be undone.")) return;
   wipeCurrent();
   if(S.db && S.dsId && w && w.annotatorKey === S.me.key){
@@ -2566,7 +2922,7 @@ $("releaseBtn").addEventListener("click", async function(){
       return;
     }
   }
-  if(!getWork(idx, slot) && slot > 1) S.slot = 1;
+  if(!getWork(idx, slot)) S.slot = defaultSlot(idx);
   renderRail(); renderProgress(); renderSlots(); renderForm();
   toast(others ? ("QA " + slot + " deleted.") : "Annotation deleted. This page is open again.", null);
 });
@@ -2578,75 +2934,153 @@ $("jsonDrop").addEventListener("dragover", function(e){ e.preventDefault(); $("j
 $("jsonDrop").addEventListener("dragleave", function(){ $("jsonDrop").classList.remove("over"); });
 $("jsonDrop").addEventListener("drop", function(e){
   e.preventDefault(); $("jsonDrop").classList.remove("over");
-  var f = e.dataTransfer.files && e.dataTransfer.files[0];
-  if(f) ingestJson(f);
+  var fl = Array.prototype.slice.call(e.dataTransfer.files || []);
+  if(fl.length) ingestJson(fl, "new");
 });
-$("jsonInput").addEventListener("change", function(e){ if(e.target.files[0]) ingestJson(e.target.files[0]); e.target.value=""; });
+/* copy the FileList first: clearing the input empties it before the async read gets there */
+$("jsonInput").addEventListener("change", function(e){
+  var fl = Array.prototype.slice.call(e.target.files); e.target.value = "";
+  if(fl.length) ingestJson(fl, "new");
+});
+$("appendBtn").addEventListener("click", function(){ $("jsonAppendInput").click(); });
+$("jsonAppendInput").addEventListener("change", function(e){
+  var fl = Array.prototype.slice.call(e.target.files); e.target.value = "";
+  if(fl.length) ingestJson(fl, "append");
+});
 
-async function ingestJson(file){
-  var status = $("datasetStatus");
-  status.innerHTML = '<div class="notice info"><span>&#8987;</span><span>Reading ' + esc(file.name) + '&hellip;</span></div>';
-  var arr;
-  try{
-    var text = await file.text();
-    arr = JSON.parse(text);
-  }catch(e){
-    status.innerHTML = '<div class="notice err"><span>&#9888;</span><span>That file is not valid JSON. ' + esc(e.message) + '</span></div>';
-    return;
+function cleanRecord(o){
+  if(!o || typeof o !== "object" || !o.gt_image) return null;
+  var ev = o.evidence || {};
+  var spans = Array.isArray(o.gt_page_ambiguous_spans) ? o.gt_page_ambiguous_spans.filter(function(s){
+    return s && typeof s === "object";
+  }).map(function(s){
+    return {
+      ambiguous_span: s.ambiguous_span || "", ambiguous_element: s.ambiguous_element || "",
+      object: s.object || "", type: s.type || "", reason: s.reason || "", confidence: s.confidence || ""
+    };
+  }) : [];
+  var img = String(o.gt_image);
+  var source = o.source || stemOf(img).replace(/_page_?\d+$/i, "");
+  var brand = o.brand || (source.indexOf("__") > 0 ? source.split("__")[0] : "");
+  var hasRef = !!(String(o.query || "").trim() || String(o.answer || "").trim());
+  return {
+    query_id: (o.query_id != null && String(o.query_id) !== "") ? String(o.query_id) : stemOf(img),
+    query: o.query || "", answer: o.answer || "",
+    brand: brand, source: source, gt_image: img,
+    evidence: {
+      text: ev.text || "", image_description: ev.image_description || "",
+      bbox: Array.isArray(ev.bbox) ? ev.bbox.map(Number) : null,
+      bbox_format: ev.bbox_format || "normalized_0_1000_xyxy"
+    },
+    gt_page_ambiguous_spans: spans,
+    extra: !hasRef || !!(o.extra || o.is_extra || o.spare || o.is_spare)
+  };
+}
+async function readJsonFiles(files){
+  var sets = [], bad = [];
+  for(var i = 0; i < files.length; i++){
+    try{
+      var arr = JSON.parse(await files[i].text());
+      if(!Array.isArray(arr)) throw new Error("not a JSON array");
+      sets.push({name: files[i].name, arr: arr});
+    }catch(e){ bad.push(files[i].name + ": " + (e && e.message ? e.message : e)); }
   }
-  if(!Array.isArray(arr)){
-    status.innerHTML = '<div class="notice err"><span>&#9888;</span><span>The file must be a JSON array of reference examples.</span></div>';
-    return;
-  }
-  var clean = [], bad = 0;
-  arr.forEach(function(o){
-    if(!o || typeof o !== "object" || !o.gt_image){ bad++; return; }
-    var ev = o.evidence || {};
-    var spans = Array.isArray(o.gt_page_ambiguous_spans) ? o.gt_page_ambiguous_spans.filter(function(s){
-      return s && typeof s === "object";
-    }).map(function(s){
-      return {
-        ambiguous_span: s.ambiguous_span || "", ambiguous_element: s.ambiguous_element || "",
-        object: s.object || "", type: s.type || "", reason: s.reason || "", confidence: s.confidence || ""
-      };
-    }) : [];
-    clean.push({
-      query_id: o.query_id != null ? String(o.query_id) : "",
-      query: o.query || "", answer: o.answer || "",
-      brand: o.brand || "", source: o.source || "", gt_image: String(o.gt_image),
-      evidence: {
-        text: ev.text || "", image_description: ev.image_description || "",
-        bbox: Array.isArray(ev.bbox) ? ev.bbox.map(Number) : null,
-        bbox_format: ev.bbox_format || "normalized_0_1000_xyxy"
-      },
-      gt_page_ambiguous_spans: spans
-    });
-  });
-  if(!clean.length){
-    status.innerHTML = '<div class="notice err"><span>&#9888;</span><span>No usable records &mdash; every object needs a <span class="mono">gt_image</span>.</span></div>';
-    return;
-  }
-  if(!S.db){
-    S.items = clean; S.dsId = null;
-    status.innerHTML = '<div class="notice warn"><span>&#9888;</span><span>Loaded ' + clean.length + ' records into this browser only &mdash; no server is connected, so annotators will not see them.</span></div>';
-    renderAll(); return;
-  }
-  var dsId = "ds" + Date.now().toString(36);
-  // size-aware chunking: ambiguous spans make records uneven, and a stored document caps at 256 KiB
-  var LIMIT = 40000, chunks = [], cur = [], curSize = 2;   /* a spreadsheet cell holds 50,000 characters */
-  clean.forEach(function(rec){
+  return {sets: sets, bad: bad};
+}
+/* size-aware: ambiguous spans make records uneven, and a spreadsheet cell holds 50,000 characters */
+function chunkRecords(recs){
+  var LIMIT = 40000, chunks = [], cur = [], curSize = 2;
+  recs.forEach(function(rec){
     var size = JSON.stringify(rec).length + 1;
     if(cur.length && curSize + size > LIMIT){ chunks.push(cur); cur = []; curSize = 2; }
     cur.push(rec); curSize += size;
   });
   if(cur.length) chunks.push(cur);
-  status.innerHTML = '<div class="notice info"><span>&#8987;</span><span>Uploading ' + clean.length + ' records&hellip;</span></div>';
+  return chunks;
+}
+
+async function ingestJson(files, mode){
+  files = Array.prototype.slice.call(files || []);
+  if(!files.length) return;
+  var append = mode === "append";
+  var status = $("datasetStatus");
+  function say(kind, icon, html){ status.innerHTML = '<div class="notice ' + kind + '"><span>' + icon + '</span><span>' + html + '</span></div>'; }
+  if(append && !S.dsId){ say("err", "&#9888;", "There is no round to add pages to yet. Upload a dataset first."); return; }
+  say("info", "&#8987;", "Reading " + files.length + " file" + (files.length === 1 ? "" : "s") + "&hellip;");
+
+  var read = await readJsonFiles(files);
+  if(!read.sets.length){
+    say("err", "&#9888;", "None of those files could be read as a JSON array. " + esc(read.bad.join("; ")));
+    return;
+  }
+  /* two passes, so a page listed both with and without a reference keeps its reference —
+     whichever file was picked first */
+  var seen = {}, bad = 0, dup = 0, withRef = [], extras = [], all = [];
+  if(append) S.items.forEach(function(it){ seen[normImg(it.gt_image)] = 1; });
+  read.sets.forEach(function(set){
+    set.arr.forEach(function(o){
+      var rec = cleanRecord(o);
+      if(rec) all.push(rec); else bad++;
+    });
+  });
+  [false, true].forEach(function(pass){
+    all.forEach(function(rec){
+      if(rec.extra !== pass) return;
+      var key = normImg(rec.gt_image);
+      if(seen[key]){ dup++; return; }
+      seen[key] = 1;
+      (pass ? extras : withRef).push(rec);
+    });
+  });
+  var clean = withRef.concat(extras);   // pages with a reference example first, extra pages after
+  var notes = [];
+  if(dup) notes.push(dup + " duplicate page" + (dup === 1 ? "" : "s") + " skipped");
+  if(bad) notes.push(bad + " record" + (bad === 1 ? "" : "s") + " without gt_image skipped");
+  if(read.bad.length) notes.push("unreadable: " + read.bad.join("; "));
+  var tail = notes.length ? " (" + esc(notes.join(", ")) + ")" : "";
+  var mix = "<b>" + withRef.length + "</b> with a reference example, <b>" + extras.length + "</b> extra";
+
+  if(!clean.length){
+    say("err", "&#9888;", append
+      ? ("Nothing new to add &mdash; every page in " + (files.length === 1 ? "that file" : "those files") + " is already in this round" + tail + ".")
+      : ("No usable records &mdash; every object needs a <span class=\"mono\">gt_image</span>" + tail + "."));
+    return;
+  }
+  if(!S.db){
+    if(append) S.items = S.items.concat(clean); else { S.items = clean; S.dsId = null; }
+    say("warn", "&#9888;", "Loaded " + clean.length + " records into this browser only &mdash; no server is connected, so annotators will not see them.");
+    rebuildPrior(); renderAll(); return;
+  }
+  var label = files.map(function(f){ return f.name; }).join(" + ");
+  var chunks = chunkRecords(clean);
   try{
-    var sent = 0;
-    for(var c=0;c<chunks.length;c++){
-      await S.db.doc(poolChunks(dsId) + "/c" + c).set({n:c, items:chunks[c]});
-      sent += chunks[c].length;
-      status.innerHTML = '<div class="notice info"><span>&#8987;</span><span>Uploading&hellip; ' + sent + ' / ' + clean.length + '</span></div>';
+    if(append){
+      var start = S.chunkCount || 0, added = 0;
+      for(var a = 0; a < chunks.length; a++){
+        await S.db.doc(poolChunks(S.dsId) + "/c" + (start + a)).set({n: start + a, items: chunks[a]});
+        added += chunks[a].length;
+        say("info", "&#8987;", "Adding&hellip; " + added + " / " + clean.length);
+      }
+      var snapA = await S.db.doc("config/app").get();
+      var prevA = snapA.exists ? snapA.data() : {};
+      var total = S.items.length + clean.length;
+      await S.db.doc("config/app").set(Object.assign({}, prevA, {
+        itemCount: total, label: (prevA.label ? prevA.label + " + " : "") + label, updatedAt: nowISO()
+      }));
+      S.items = S.items.concat(clean);
+      S.chunkCount = start + chunks.length;
+      rebuildPrior();
+      say("info", "&#10003;", "Added <b>" + clean.length + " pages</b> (" + mix + ")" + tail +
+        ". The round now has " + total + " pages; work already done is untouched.");
+      renderAll();
+      toast("Pages added to this round.", "ok");
+      return;
+    }
+    var dsId = "ds" + Date.now().toString(36), sent = 0;
+    for(var ci = 0; ci < chunks.length; ci++){
+      await S.db.doc(poolChunks(dsId) + "/c" + ci).set({n: ci, items: chunks[ci]});
+      sent += chunks[ci].length;
+      say("info", "&#8987;", "Uploading&hellip; " + sent + " / " + clean.length);
     }
     var prevCfg = {};
     try{ var cs = await S.db.doc("config/app").get(); if(cs.exists) prevCfg = cs.data(); }catch(e){}
@@ -2655,46 +3089,136 @@ async function ingestJson(file){
     if(rounds.indexOf(dsId) < 0) rounds.push(dsId);
     await S.db.doc("config/app").set({
       dsId: dsId,
-      target: Math.max(1, Number($("targetInput").value) || 50),
+      target: S.targets[0], targets: S.targets,
       maxPerPage: Math.max(1, Math.min(5, Number($("maxPerPageInput").value) || 2)),
       pagesPerAnnotator: Math.max(0, Number($("pagesCapInput").value) || 0),
-      itemCount: clean.length, label: file.name, updatedAt: nowISO(),
+      otherSecond: S.otherSecond, priorPolicy: S.priorPolicy,
+      priorVersion: prevCfg.priorVersion || 0,
+      itemCount: clean.length, label: label, updatedAt: nowISO(),
       rounds: rounds.slice(-20)
     });
-    S.dsId = dsId; S.items = clean; S.work = {}; S.cur = -1;
+    S.dsId = dsId; S.items = clean; S.work = {}; S.cur = -1; S.chunkCount = chunks.length;
+    rebuildPrior();
     subscribeWork();
-    status.innerHTML = '<div class="notice info"><span>&#10003;</span><span><b>' + clean.length + ' pages</b> are live' +
-      (bad ? ' (' + bad + ' record' + (bad===1?'':'s') + ' skipped &mdash; no gt_image)' : '') +
-      '. Share the image ZIP link with your annotators and they can start.</span></div>';
+    say("info", "&#10003;", "<b>" + clean.length + " pages</b> are live (" + mix + ")" + tail +
+      ". Share the image ZIP link with your annotators and they can start.");
     renderAll();
     toast("Dataset published.", "ok");
   }catch(err){
-    var m = (err && err.code === "invalid_argument")
+    var m = (err && (err.code === "invalid_argument" || err.code === "forbidden"))
       ? "The server refused the upload. Unlock the Admin console with the study passcode first."
       : (err && err.message ? err.message : String(err));
-    status.innerHTML = '<div class="notice err"><span>&#9888;</span><span>Upload failed. ' + esc(m) + '</span></div>';
+    say("err", "&#9888;", "Upload failed. " + esc(m));
   }
 }
 
 $("saveTarget").addEventListener("click", async function(){
-  var target = Math.max(1, Math.min(5000, Number($("targetInput").value) || 50));
+  var targets = parseTargets($("targetInput").value), target = targets[0];
   var maxPer = Math.max(1, Math.min(5, Number($("maxPerPageInput").value) || 2));
   var capRaw = String($("pagesCapInput").value).trim();
   var cap = capRaw === "" ? 0 : Math.max(0, Math.min(5000, Number(capRaw) || 0));
-  applyConfig({target: target, maxPerPage: maxPer, pagesPerAnnotator: cap});
-  renderProgress(); renderSlots(); renderRail();
+  var otherSecond = $("otherSecondInput").value, priorPolicy = $("priorPolicyInput").value;
+  applyConfig({targets: targets, maxPerPage: maxPer, pagesPerAnnotator: cap, otherSecond: otherSecond, priorPolicy: priorPolicy});
+  renderAll();
   if(!S.db){ toast("Saved for this browser only — no server is connected.", "err"); return; }
   try{
     var snap = await S.db.doc("config/app").get();
     var prev = snap.exists ? snap.data() : {};
     await S.db.doc("config/app").set(Object.assign({}, prev, {
-      target: target, maxPerPage: maxPer, pagesPerAnnotator: cap, updatedAt: nowISO()
+      target: target, targets: targets, maxPerPage: maxPer, pagesPerAnnotator: cap,
+      otherSecond: otherSecond, priorPolicy: priorPolicy, updatedAt: nowISO()
     }));
     toast("Settings saved — annotators see them right away.", "ok");
   }catch(e){ toast((e && e.code === "forbidden") ? "The server refused that \u2014 unlock the Admin console first." : "Could not save the settings: " + ((e && e.message) || e), "err"); }
 });
 
+function renderPriorStatus(){
+  var host = $("priorStatus");
+  if(!host) return;
+  $("priorClear").hidden = !S.prior.length;
+  if(!S.prior.length){ host.innerHTML = '<div class="empty-note">No earlier results loaded.</div>'; return; }
+  var pages = Object.keys(S.priorByImg).length, inRound = 0, hidden = 0, full = 0, room = 0;
+  S.items.forEach(function(it, i){
+    var n = priorRowsOf(i).length;
+    if(!n) return;
+    inRound++;
+    if(S.priorPolicy !== "open"){ if(isPriorHidden(i)) hidden++; }
+    else if(n >= S.maxPerPage) full++;
+    else room++;
+  });
+  var what = S.priorPolicy !== "open"
+    ? ("<b>" + hidden + "</b> of them are hidden from annotators" + (inRound > hidden ? " (" + (inRound - hidden) + " already had work in this round and stay visible)" : "") + ".")
+    : ("<b>" + room + "</b> still have room for another QA and <b>" + full + "</b> are full.");
+  host.innerHTML = '<div class="notice info"><span>&#10003;</span><span><b>' + S.prior.length + ' earlier QA</b> on ' +
+    pages + ' pages. ' + inRound + ' of those pages are in this round; ' + what + '</span></div>';
+}
+$("priorBtn").addEventListener("click", function(){ $("priorInput").click(); });
+$("priorInput").addEventListener("change", function(e){
+  var fl = Array.prototype.slice.call(e.target.files); e.target.value = "";
+  if(fl.length) ingestPrior(fl);
+});
+$("priorClear").addEventListener("click", function(){
+  if(!S.prior.length) return;
+  if(!confirm("Forget the earlier results? The pages they covered become open again.")) return;
+  storePrior([]);
+});
+async function ingestPrior(files){
+  var host = $("priorStatus");
+  function say(kind, icon, html){ host.innerHTML = '<div class="notice ' + kind + '"><span>' + icon + '</span><span>' + html + '</span></div>'; }
+  say("info", "&#8987;", "Reading&hellip;");
+  var read = await readJsonFiles(files);
+  if(!read.sets.length){ say("err", "&#9888;", "None of those files could be read as a JSON array. " + esc(read.bad.join("; "))); return; }
+  var rows = [], drafts = 0, bad = 0, seen = {};
+  read.sets.forEach(function(set){
+    set.arr.forEach(function(r){
+      if(!r || typeof r !== "object" || !r.gt_image){ bad++; return; }
+      if(r.status && r.status !== "done"){ drafts++; return; }   // unfinished drafts never block a page
+      var ev = r.evidence || {}, who = r.annotator || {};
+      var row = {
+        gt_image: String(r.gt_image), qa_index: Number(r.qa_index) || 1,
+        query_id: r.query_id != null ? String(r.query_id) : "",
+        query: r.query || "", answer: r.answer || "", text: ev.text || "",
+        image_description: ev.image_description || "",
+        bbox: Array.isArray(ev.bbox) ? ev.bbox.map(Number) : null,
+        name: who.name || "", email: who.email || ""
+      };
+      var key = normImg(row.gt_image) + "|" + row.qa_index + "|" + row.query;
+      if(seen[key]) return;
+      seen[key] = 1;
+      rows.push(row);
+    });
+  });
+  if(!rows.length){ say("err", "&#9888;", "No completed QA in " + (files.length === 1 ? "that file" : "those files") + "."); return; }
+  await storePrior(rows);
+  if(drafts || bad) toast((drafts ? drafts + " draft" + (drafts === 1 ? "" : "s") : "") + (drafts && bad ? " and " : "") +
+    (bad ? bad + " record" + (bad === 1 ? "" : "s") + " without gt_image" : "") + " ignored.", null);
+}
+async function storePrior(rows){
+  var host = $("priorStatus");
+  if(!S.db){ S.prior = rows; rebuildPrior(); renderAll(); return; }
+  try{
+    host.innerHTML = '<div class="notice info"><span>&#8987;</span><span>Saving&hellip;</span></div>';
+    await S.db.deleteCollection("prior/rows");
+    var chunks = chunkRecords(rows);
+    for(var i = 0; i < chunks.length; i++) await S.db.doc("prior/rows/c" + i).set({n: i, rows: chunks[i]});
+    var snap = await S.db.doc("config/app").get();
+    var prev = snap.exists ? snap.data() : {};
+    var v = Date.now();
+    await S.db.doc("config/app").set(Object.assign({}, prev, {priorVersion: v, updatedAt: nowISO()}));
+    S.priorVersion = v;
+    S.prior = rows;
+    rebuildPrior();
+    renderAll();
+    toast(rows.length ? "Earlier results loaded." : "Earlier results cleared.", "ok");
+  }catch(err){
+    host.innerHTML = '<div class="notice err"><span>&#9888;</span><span>' +
+      esc((err && err.code === "forbidden") ? "The server refused that \u2014 unlock the Admin console first." : ((err && err.message) || String(err))) +
+      '</span></div>';
+  }
+}
+
 function renderAdmin(){
+  renderPriorStatus();
   var total = S.items.length;
   var done = 0;
   var per = {}, claimedPages = {};
@@ -2713,6 +3237,7 @@ function renderAdmin(){
     var a = S.annotators[k];
     var p = per[k] || (per[k] = {name:a.name, email:a.email, qa:0, done:0, pages:{}, last:""});
     p.name = p.name || a.name; p.email = p.email || a.email;
+    p.target = Number(a.target) || 0;
     p.skipped = Array.isArray(a.skipped) ? a.skipped.length : 0;
     if((a.lastSeen||"") > p.last) p.last = a.lastSeen || "";
   });
@@ -2723,7 +3248,7 @@ function renderAdmin(){
     {k:"Pages claimed", v:claimed, sub: total ? Math.round(claimed/total*100) + "% of the pool" : "—"},
     {k:"QA completed", v:done, sub:"across all annotators", hi:true},
     {k:"Pages still open", v:Math.max(0, total-claimed), sub:"available to claim"},
-    {k:"Annotators", v:people, sub: S.target + " QA each" + (S.pagesCap ? ", " + S.pagesCap + " pages" : "")}
+    {k:"Annotators", v:people, sub: (S.targets.length > 1 ? S.targets.join(" or ") + " QA, own choice" : S.target + " QA each") + (S.pagesCap ? ", " + S.pagesCap + " pages" : "")}
   ];
   var host = $("adminTiles"); host.innerHTML = "";
   tiles.forEach(function(t){
@@ -2752,17 +3277,18 @@ function renderAdmin(){
       var tr = el("tr");
       tr.appendChild(el("td","name", p.name || "—"));
       tr.appendChild(el("td","mono", p.email || k));
-      tr.appendChild(el("td","num", String(p.done)));
+      var goal = p.target || S.target;
+      tr.appendChild(el("td","num", p.done + " / " + goal));
       tr.appendChild(el("td","num", String(Math.max(0, p.qa - p.done))));
       tr.appendChild(el("td","num", String(Object.keys(p.pages || {}).length) + (S.pagesCap ? " / " + S.pagesCap : "")));
       tr.appendChild(el("td","num", String(p.skipped || 0)));
       var pc = el("td");
       var wrap = el("div"); wrap.style.cssText="display:flex;align-items:center;gap:8px;min-width:120px";
       var bar = el("div","bar"); bar.style.cssText="flex:1;min-width:64px";
-      var fill = el("i"); fill.style.width = Math.min(100, S.target ? p.done/S.target*100 : 0) + "%";
+      var fill = el("i"); fill.style.width = Math.min(100, goal ? p.done/goal*100 : 0) + "%";
       bar.appendChild(fill);
       wrap.appendChild(bar);
-      wrap.appendChild(el("span","tnum", Math.round(S.target ? p.done/S.target*100 : 0) + "%"));
+      wrap.appendChild(el("span","tnum", Math.round(goal ? p.done/goal*100 : 0) + "%"));
       pc.appendChild(wrap); tr.appendChild(pc);
       tr.appendChild(el("td",null, fmtTime(p.last)));
 
@@ -2804,7 +3330,7 @@ function buildExport(onlyDone, onlyKey){
   S.items.forEach(function(it, i){
     slotsOf(i).forEach(function(entry){
       var w = entry.w;
-      if(!w.annotatorKey) return;
+      if(!w.annotatorKey || w.prior) return;   // earlier rounds were exported back then
       if(onlyKey && w.annotatorKey !== onlyKey) return;
       if(onlyDone && w.status !== "done") return;
       out.push(exportRow(it, i, entry.slot, w));
@@ -2833,7 +3359,8 @@ function exportRow(it, i, slot, w){
         bbox: Array.isArray(w.bbox) ? w.bbox : null,
         bbox_format: "normalized_0_1000_xyxy"
       },
-      annotator: {name: w.annotatorName || "", email: w.annotatorEmail || ""},
+      annotator: {name: w.annotatorName || "", family_name: w.annotatorFamily || "", given_name: w.annotatorGiven || "", email: w.annotatorEmail || ""},
+      page_type: it.extra ? "extra" : "reference",
       status: w.status || "draft",
       updated_at: w.updatedAt || ""
   };
