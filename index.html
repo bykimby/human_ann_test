@@ -937,7 +937,7 @@ table.grid td.name{color:var(--ink);font-weight:500}
 window.MVQA = (function(){
 "use strict";
 
-var BACKEND_URL = "https://script.google.com/macros/s/AKfycbyJCbxc_oxrIjEAky99hMPCIErUEL7lqE4De5SGR6ztq4xURPBWCs777EGeI5fBUllV/exec";
+var BACKEND_URL = "PASTE_YOUR_WEB_APP_URL_HERE";
 
 /* ---------- link parameters: #k=<access code>, #backend=<url> ---------- */
 function hashParam(name){
@@ -1509,6 +1509,16 @@ function capReached(){ return S.pagesCap > 0 && myPageCount() >= S.pagesCap; }
       applyConfig(c);
     }
   }catch(e){
+    if(e && e.code === "bad_code"){
+      /* the study is behind an access code and this link is missing it */
+      S.db = null; S.dbReady = false;
+      setSave("offline", "Link incomplete");
+      $("datasetStatus").innerHTML = '<div class="notice err"><span>&#9888;</span><span>This link is incomplete.</span></div>';
+      $("railList").innerHTML = '<div class="empty-note">This link is missing its access code.</div>';
+      toast("This link is missing its access code \u2014 please use the full link your coordinator sent, ending in #k=\u2026", "err");
+      renderAdmin();
+      return;
+    }
     toast("Could not reach the server yet \u2014 retrying in the background.", "err");
   }
   if(S.dsId){ await loadPool(); subscribeWork(); }
