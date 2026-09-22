@@ -307,6 +307,9 @@ main{flex:1;min-height:0;position:relative}
   padding:7px 9px;font:inherit;font-size:13px;color:inherit;min-width:190px
 }
 .setting.wide{max-width:240px}
+.guide-sec.caution{border:1px solid var(--warn);border-left-width:4px;background:var(--warn-soft);border-radius:var(--r-m);padding:16px 20px}
+.guide-sec.caution > h2{color:var(--warn);border-bottom-color:transparent;margin-bottom:6px}
+.guide-sec.caution ul{color:var(--ink)}
 .setting input[type="text"]{
   width:130px;background:var(--surface-3);border:1px solid var(--line);border-radius:var(--r-m);padding:7px 9px
 }
@@ -562,7 +565,7 @@ table.grid td.name{color:var(--ink);font-weight:500}
   </nav>
   <div class="spacer"></div>
   <span class="savepill" id="savePill" data-state="idle"><span class="dot"></span><span id="savePillText">Not signed in</span></span>
-  <div class="who" id="whoBox" hidden><span id="whoName"></span><button type="button" id="switchUser">Switch</button></div>
+  <div class="who" id="whoBox" hidden><span id="whoName"></span><button type="button" id="switchUser">Switch</button><button type="button" id="signOutBtn">Sign out</button></div>
   <div class="who" id="signedOutBox"><button type="button" id="signInBtn">Sign in</button></div>
 </header>
 
@@ -668,6 +671,15 @@ table.grid td.name{color:var(--ink);font-weight:500}
         </ul>
       </section>
 
+      <section class="guide-sec caution">
+        <h2>&#9888; Caution &mdash; pages that already have someone else&rsquo;s QA</h2>
+        <ul>
+          <li>If another annotator has already written a QA on a page, you can <strong>see</strong> it but you <strong>cannot edit</strong> it.</li>
+          <li><strong>Do not create the same data again.</strong> Your QA must not repeat their question, and must be about a <strong>different visual element</strong> &mdash; their bounding box is shown dashed on the page.</li>
+          <li>If you think their QA is wrong, do not write a corrected copy of it. <strong>Ask the coordinator to fix it</strong>, giving the page file name and the QA number.</li>
+        </ul>
+      </section>
+
       <section class="guide-sec">
         <h2>Final Output</h2>
         <p>100 candidate pages &rarr; select the suitable pages &rarr; create up to 2 annotations per page &rarr; <strong>50 or 100 QA examples per annotator</strong> &mdash; you choose one when you sign in.</p>
@@ -682,6 +694,7 @@ table.grid td.name{color:var(--ink);font-weight:500}
           <li>A QA becomes yours as soon as you start typing, and no one else can change it after that.</li>
           <li>A page can carry up to two QA, and <strong>they do not have to be by the same person</strong>. Once you have written QA 1, <strong>+ Add QA 2</strong> appears &mdash; press it to write a second question about a different element on the same page. When someone else has finished QA 1 on a page, that page shows a <strong>half-filled dot</strong> in the list: open it and you land on QA 2, where you can add your own. You can read their QA 1, and its box is drawn dashed on the page, but only they can change it. The pills above the form switch between QA 1 and QA 2; the sidebar counts <strong>QA</strong>, not pages.</li>
           <li>Pages marked <strong>extra</strong> in the list have no reference example.</li>
+          <li><strong>Coordinator:</strong> unlock <em>Admin</em>, then open <em>Annotate</em> without signing in (or press <em>Sign out</em>). That is admin review: every page and QA is readable, and any QA can be corrected or deleted. Corrections stay under the original author.</li>
           <li>Drag on the image to draw the bounding box; drag its corners to resize, drag inside it to move. It is stored as <span class="mono">normalized_0_1000_xyxy</span>.</li>
           <li>Zoom with &minus; and + in the toolbar, or <strong>Fit</strong> to see the whole page. When the page is larger than the window, switch to the <strong>Pan</strong> tool &mdash; or just hold <strong>Space</strong> &mdash; and drag to move around it. <span class="mono">B</span> and <span class="mono">H</span> switch between Box and Pan.</li>
           <li>Press <strong>Mark complete</strong> (or &#8984;/Ctrl + Enter) when the page is done. The sidebar counter tracks your completed pages.</li>
@@ -1240,7 +1253,7 @@ CollectionRef.prototype.onSnapshot = function(cb, errCb){ return watch(this.path
    second visit resumes instead of pulling the whole study down again.
    Apps Script bills by runtime, so the page idles slowly and quickens
    only while somebody is actually looking at it.                        */
-var watchers = [], store = {}, cursors = {};
+var watchers = [], store = {}, cursors = {}, resyncSoon = false;
 var timer = null, polling = false, savedAt = 0;
 var IDLE = 150000, SLOW = 30000, FAST = 12000, fastUntil = 0;
 
@@ -1299,12 +1312,18 @@ async function tick(){
     cols.forEach(function(path){
       var part = (out.cols || {})[path];
       if(!part) return;
+      var sentSince = cursors[path] || 0;
       cursors[path] = part.rev || cursors[path] || 0;
       var map = store[path] || (store[path] = {});
       var live = {};
       (part.index || []).forEach(function(id){ live[id] = 1; });
       Object.keys(map).forEach(function(id){ if(!live[id]) delete map[id]; });
       (part.docs || []).forEach(function(d){ map[d.id] = d.data; });
+      /* the server lists a document this browser never received: the sheet was
+         restored to an earlier version, so start this collection over */
+      if(sentSince && (part.index || []).some(function(id){ return !(id in map); })){
+        cursors[path] = 0; resyncSoon = true;
+      }
       applyEcho(path, map, startedAt);
       var rows = Object.keys(map).map(function(id){ return {id:id, data:map[id]}; });
       watchers.forEach(function(w){ if(w.alive && w.isCol && w.path === path){ w.primed = true; w.cb(colSnap(rows)); } });
@@ -1325,7 +1344,8 @@ async function tick(){
     watchers.forEach(function(w){ if(w.alive && !w.primed) w.err(err); });
   }finally{
     polling = false;
-    nudge();
+    nudge(resyncSoon ? 300 : undefined);
+    resyncSoon = false;
   }
 }
 
@@ -1459,13 +1479,16 @@ var LSA = "mvqa.admin.v2";
 var LSAK = "mvqa.adminkey.v2";   /* LSK is already the identity key */
 /* The unlock belongs to one signed-in person in one browser session: switching accounts or
    closing the browser locks it again, so an annotator never inherits the console. */
-function adminUnlockKey(){ return S.me ? S.me.key : "anon"; }
+function adminUnlockKey(){ return "admin"; }
+/* the administrator, signed in as nobody: reads every QA, corrects or deletes them, writes none */
+function adminReview(){ return !S.me && isAdminUnlocked(); }
 function isAdminUnlocked(){
   try{ return sessionStorage.getItem(LSA) === adminUnlockKey(); }catch(e){ return false; }
 }
 function lockAdmin(){
   try{ sessionStorage.removeItem(LSA); sessionStorage.removeItem(LSAK); }catch(e){}
   try{ MVQA.setAdminKey(null); }catch(e){}
+  try{ renderSlots(); if(S.cur >= 0) renderForm(); else showImage(); }catch(e){}
   if($("page-admin").getAttribute("data-active") === "true") goto("guide");
 }
 try{ localStorage.removeItem("mvqa.admin.v1"); }catch(e){}   // retire the old browser-wide unlock
@@ -1511,7 +1534,8 @@ function goto(name){
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(b){
     b.setAttribute("aria-selected", String(b.getAttribute("data-goto")===name));
   });
-  if(name==="annotate" && !S.me) openSignin();
+  if(name==="annotate" && !S.me && !adminReview()) openSignin();
+  if(name==="annotate"){ renderSlots(); if(S.cur >= 0) renderForm(); else showImage(); }
   if(name==="annotate") requestAnimationFrame(layoutImage);
   if(name==="admin"){ renderAdmin(); try{ MVQA.refresh(); }catch(e){} }
 }
@@ -1555,6 +1579,16 @@ $("switchUser").addEventListener("click", function(){
   openSignin();
 });
 $("signInBtn").addEventListener("click", function(){ openSignin(); });
+$("signOutBtn").addEventListener("click", async function(){
+  try{ await flushSave(true); }catch(e){}
+  try{ localStorage.removeItem(LSK); }catch(e){}
+  S.me = null; S.cur = -1; S.slot = 1;
+  $("whoBox").hidden = true; $("signedOutBox").hidden = false;
+  setSave("idle", "Not signed in");
+  renderAll(); showImage();
+  if($("page-annotate").getAttribute("data-active") === "true" && !adminReview()) openSignin();
+  toast(adminReview() ? "Signed out. You are in admin review." : "Signed out.", null);
+});
 /* names are romanised on purpose: the dataset credits people in English */
 var NAME_OK = /^[A-Za-z][A-Za-z .'\-]*$/;
 function tidyName(s){ return String(s || "").replace(/\s+/g, " ").trim(); }
@@ -1577,8 +1611,6 @@ $("signinForm").addEventListener("submit", function(ev){
 });
 function setIdentity(me){
   var changed = !S.me || S.me.key !== me.key;
-  // a genuine switch locks the console; restoring the same person on reload does not
-  if(S.me && S.me.key !== me.key) lockAdmin();
   S.me = me;
   try{ localStorage.setItem(LSK, JSON.stringify(me)); }catch(e){}
   $("whoBox").hidden = false;
@@ -1689,6 +1721,10 @@ function joinHint(idx){
 }
 /* the QA to show when a page is opened */
 function defaultSlot(idx){
+  if(adminReview()){
+    var any = slotsOf(idx).filter(function(x){ return x.w.annotatorKey; });
+    return any.length ? any[0].slot : 1;
+  }
   var k = myKey();
   if(k){
     var mine = slotsOf(idx).filter(function(x){ return x.w.annotatorKey === k; });
@@ -1885,6 +1921,11 @@ function subscribeWork(){
       if(b && b.idx != null){ if(!b.slot) b.slot = 1; next[d.id] = b; }
     });
     S.work = next;
+    /* the QA on screen changed on the server and nobody is typing here: show the new version */
+    if(S.cur >= 0 && !S.dirty){
+      var cw = getWork(S.cur, S.slot), shown = collect();
+      if(cw ? !sameContent(cw, shown) : !isBlank(shown)) renderForm();
+    }
     renderRail(); renderProgress(); renderSlots(); renderAdmin();
     if(S.cur >= 0) reflectClaim();
     syncPendingDrafts();
@@ -2080,7 +2121,7 @@ function afterImages(n){
   $("imgCount").className = "chip " + (S.images.size ? "done" : "available");
   if(n) toast(n + " page image" + (n===1?"":"s") + " loaded.", "ok");
   if(S.cur >= 0) showImage();
-  else if(!(S.items.length && selectNextOpen())) showImage();   // nothing to open: say why
+  else if(adminReview() || !(S.items.length && selectNextOpen())) showImage();   // nothing to open: say why
 }
 
 /* IndexedDB cache so a reload does not need the ZIP again */
@@ -2173,6 +2214,10 @@ function showImage(){
       m = S.images.size
         ? ("The " + S.images.size + " images are loaded, but no dataset has been published on this site yet. The page list comes from the dataset JSON uploaded in <b>Admin</b> &mdash; the ZIP only holds the pictures.")
         : "No dataset has been published on this site yet. The page list comes from the dataset JSON uploaded in <b>Admin</b>; the image ZIP only holds the pictures.";
+    }else if(adminReview()){
+      h = "Admin review";
+      m = S.images.size ? "Pick any page on the left to read its QA and correct them."
+                        : "Load the image ZIP, then pick any page on the left to read its QA and correct them.";
     }else if(!S.me){
       m = "Sign in, then load the image ZIP you downloaded from Drive. The pages appear in the list on the left.";
     }else if(!S.images.size){
@@ -2462,7 +2507,8 @@ function renderForm(){
   var local = (mine || free) ? readLocalDraft(S.cur, S.slot) : null;
   var src = w.annotatorKey ? w : {};
   // an unsent local draft (connection dropped mid-typing) wins over an older server copy
-  if(local && (local.updatedAt || "") > (src.updatedAt || "")) src = local;
+  if(local && !local.synced && (local.updatedAt || "") > (src.updatedAt || "")) src = local;
+  S.dirty = src === local;   // an unsent local copy still has to go up; anything else is as saved
 
   $("fQuestion").value = src.question || "";
   $("fAnswer").value = src.answer || "";
@@ -2571,7 +2617,33 @@ function addRef(host, k, v){
   host.appendChild(f);
 }
 
+function reflectAdmin(){
+  var host = $("claimNotice");
+  host.innerHTML = "";
+  var so = slotOwner(S.cur, S.slot);
+  var editable = !!(so && !so.prior);
+  FIELDS.forEach(function(p){ $(p[0]).readOnly = !editable; $(p[0]).style.opacity = editable ? "1" : ".6"; });
+  $("completeBtn").hidden = true; $("skipBtn").hidden = true; $("addQaBtn").hidden = true;
+  $("releaseBtn").hidden = !editable;
+  $("releaseBtn").textContent = "Delete QA " + S.slot;
+  var n = el("div", "notice info");
+  n.style.cssText = "flex-wrap:wrap";
+  var html;
+  if(editable){
+    html = "<b>Admin review.</b> QA " + S.slot + " by <b>" + esc(ownerLabel(so)) + "</b> (" + (so.status === "done" ? "completed" : "draft") + ")" +
+      (so.adminEditedAt ? ", corrected " + esc(fmtTime(so.adminEditedAt)) : "") +
+      ". Edits are saved to their QA as a correction; it stays theirs.";
+  }else if(so){
+    html = "<b>Admin review.</b> QA " + S.slot + " comes from an earlier round and cannot be changed here.";
+  }else{
+    html = "<b>Admin review.</b> There is no QA in this slot. You can read and correct QA, not write new ones &mdash; sign in as an annotator for that.";
+  }
+  n.innerHTML = "<span>&#128273;</span><span>" + html + "</span>";
+  host.appendChild(n);
+}
 function reflectClaim(){
+  $("completeBtn").hidden = false; $("skipBtn").hidden = false;
+  if(adminReview()){ reflectAdmin(); return; }
   var host = $("claimNotice");
   host.innerHTML = "";
   var k = myKey();
@@ -2609,7 +2681,7 @@ function reflectClaim(){
 
   if(theirs){
     note("warn", "&#128274;", "QA " + S.slot + " on this page was written by <b>" + esc(ownerLabel(so)) +
-      "</b>. You can read it, but only they can change it." +
+      "</b>. You can read it, but only they can change it — if it looks wrong, ask the coordinator to fix it; do not rewrite it as yours." +
       (nextSlot ? " You can add your own QA about a different element." : esc(joinHint(S.cur))), nextSlot);
   }else if(closed){
     note("warn", "&#9888;", esc(whyClosed(S.cur)));
@@ -2627,13 +2699,21 @@ function reflectClaim(){
       var o = others[0].w;
       note("info", "&#9432;", "You are adding QA " + S.slot + " to a page where <b>" + esc(ownerLabel(o)) +
         "</b> already wrote QA " + others[0].slot + (o.question ? ": <i>" + esc(o.question) + "</i>" : "") +
-        ". Choose a <b>different visual element</b> \u2014 their box is drawn dashed on the page.");
+        ". Do not repeat it: choose a <b>different visual element</b> \u2014 their box is drawn dashed on the page.");
     }
   }
   if(!done) $("completeBtn").textContent = "Mark complete";
 }
 function ensureEditable(){
-  if(!S.me){ openSignin(); return false; }
+  if(!S.me){
+    if(adminReview()){
+      var ao = slotOwner(S.cur, S.slot);
+      if(ao && !ao.prior) return true;
+      toast(ao ? "Earlier-round QA cannot be changed here." : "In admin review you correct existing QA; there is none in this slot.", null);
+      return false;
+    }
+    openSignin(); return false;
+  }
   var o = slotOwner(S.cur, S.slot);
   if(o && o.annotatorKey !== S.me.key){
     toast("QA " + S.slot + " on this page was written by " + ownerLabel(o) + " and cannot be changed.", "err");
@@ -2698,6 +2778,35 @@ function isBlank(d){
 function draftKey(idx, slot){
   return LSD + (S.me?S.me.key:"anon") + "." + (S.dsId||"local") + "." + idx + ((slot||1) > 1 ? "-" + slot : "");
 }
+/* a correction keeps the QA its author's: only the content changes, and it is marked */
+async function adminFlush(){
+  clearTimeout(S.saveTimer);
+  if(S.cur < 0 || !adminReview() || !S.db || !S.dsId || !S.dirty) return;
+  var seq = S.editSeq;
+  var d = collect(), docId = workId(d.idx, d.slot), w = S.work[docId];
+  if(!w || !w.annotatorKey){ return; }
+  if(sameContent(w, d)){ S.dirty = false; setSave("saved", "No changes"); return; }
+  var at = nowISO();
+  var body = Object.assign({}, w, {
+    question: d.question, answer: d.answer, evidenceText: d.evidenceText,
+    imageDescription: d.imageDescription, bbox: d.bbox, updatedAt: at, adminEditedAt: at
+  });
+  try{
+    await S.db.doc(workCol(S.dsId) + "/" + docId).set(body);
+    S.work[docId] = body;
+    if(S.editSeq === seq) S.dirty = false;
+    setSave("saved", "Correction saved " + fmtTime(at));
+    reflectClaim();
+  }catch(e){
+    setSave("offline", "Correction not saved");
+    toast("Could not save the correction: " + ((e && e.message) || e), "err");
+  }
+}
+function sameContent(w, d){
+  return (w.question || "") === (d.question || "") && (w.answer || "") === (d.answer || "") &&
+    (w.evidenceText || "") === (d.evidenceText || "") && (w.imageDescription || "") === (d.imageDescription || "") &&
+    JSON.stringify(w.bbox || null) === JSON.stringify(d.bbox || null);
+}
 function writeLocalDraft(d){
   try{ localStorage.setItem(draftKey(d.idx, d.slot), JSON.stringify(d)); }catch(e){}
 }
@@ -2723,7 +2832,14 @@ function wipeCurrent(){
 
 function queueSave(){
   if(S.cur < 0) return;
-  if(!S.me){ openSignin(); return; }
+  S.dirty = true; S.editSeq = (S.editSeq || 0) + 1;
+  if(!S.me){
+    if(!adminReview()){ openSignin(); return; }
+    setSave("saving", "Saving correction\u2026");
+    clearTimeout(S.saveTimer);
+    S.saveTimer = setTimeout(function(){ adminFlush(); }, 900);
+    return;
+  }
   var d = collect();
   writeLocalDraft(d);
   if(isBlank(d)) return;
@@ -2734,9 +2850,16 @@ function queueSave(){
 }
 async function flushSave(immediate){
   clearTimeout(S.saveTimer);
-  if(S.cur < 0 || !S.me) return;
+  if(S.cur < 0) return;
+  if(!S.dirty) return;                       // nothing typed since this form was shown
+  var seq = S.editSeq;
+  if(!S.me){ if(adminReview()) return adminFlush(); return; }
   var d = collect();
   if(isBlank(d)){ return; }
+  /* nothing changed: do not write. Opening and leaving a page must never overwrite the
+     server - for instance with a stale copy after the sheet was restored */
+  var known = S.work[workId(d.idx, d.slot)];
+  if(known && S.me && known.annotatorKey === S.me.key && sameContent(known, d)){ S.dirty = false; return; }
   writeLocalDraft(d);
   if(!S.db || !S.dsId){ setSave("offline","Saved in this browser only"); return; }
   var so = slotOwner(d.idx, d.slot);
@@ -2765,6 +2888,8 @@ async function flushSave(immediate){
     });
     await S.db.doc(workCol(S.dsId) + "/" + docId).set(body);
     S.work[docId] = body;
+    writeLocalDraft(Object.assign({}, d, {synced: true}));   // the server has it now
+    if(S.editSeq === seq) S.dirty = false;                    // unless more was typed meanwhile
     S.pending = false;
     setSave("saved","Saved " + fmtTime(body.updatedAt));
     renderSlots(); reflectClaim();   // the "add another QA" affordance appears as soon as this one is real
@@ -2831,13 +2956,14 @@ async function syncPendingDrafts(){
   for(var j=0;j<keys.length;j++){
     var d = null;
     try{ d = JSON.parse(localStorage.getItem(keys[j])); }catch(e){}
-    if(!d || d.idx == null || isBlank(d)) continue;
+    if(!d || d.synced || d.idx == null || isBlank(d)) continue;
     var slot = d.slot || 1, id = workId(d.idx, slot);
     var server = S.work[id];
     if((server && (server.updatedAt || "")) >= (d.updatedAt || "")) continue;
-    var owner = pageOwner(d.idx);
-    if(owner && owner.annotatorKey !== S.me.key) continue;
-    if(!owner && capReached()) continue;
+    var so = slotOwner(d.idx, slot);
+    if(so && so.annotatorKey !== S.me.key) continue;
+    if(!so && !mayTakeSlot(d.idx, slot)) continue;
+    if(!iHold(d.idx) && capReached()) continue;
     try{
       if(!server || !server.annotatorKey){
         var got = await claim(d.idx, slot);
@@ -2846,10 +2972,12 @@ async function syncPendingDrafts(){
       }
       var body = Object.assign({}, server, d, {
         slot: slot, annotatorKey: S.me.key, annotatorName: S.me.name, annotatorEmail: S.me.email,
+        annotatorFamily: S.me.familyName || "", annotatorGiven: S.me.givenName || "",
         status: (server && server.status === "done") ? "done" : "draft"
       });
       await S.db.doc(workCol(S.dsId) + "/" + id).set(body);
       S.work[id] = body;
+      writeLocalDraft(Object.assign({}, d, {synced: true}));
       pushed++;
     }catch(e){}
   }
@@ -2939,7 +3067,20 @@ $("skipBtn").addEventListener("click", async function(){
 });
 
 $("releaseBtn").addEventListener("click", async function(){
-  if(S.cur < 0 || !S.me) return;
+  if(S.cur < 0) return;
+  if(!S.me){
+    if(!adminReview()) return;
+    var ao = slotOwner(S.cur, S.slot), aid = workId(S.cur, S.slot);
+    if(!ao || ao.prior) return;
+    if(!confirm("Delete QA " + S.slot + " by " + ownerLabel(ao) + "?\n\nIt disappears from the dataset for everyone. " +
+        "Only the sheet's version history can bring it back.")) return;
+    try{ await S.db.doc(workCol(S.dsId) + "/" + aid).delete(); delete S.work[aid]; }
+    catch(e){ toast("Could not delete it: " + ((e && e.message) || e), "err"); return; }
+    S.bbox = null; S.slot = defaultSlot(S.cur);
+    renderRail(); renderProgress(); renderSlots(); renderForm(); renderAdmin();
+    toast("QA deleted.", null);
+    return;
+  }
   var so = slotOwner(S.cur, S.slot);
   if(so && so.annotatorKey !== S.me.key) return;
   var idx = S.cur, slot = S.slot, docId = workId(idx, slot);
