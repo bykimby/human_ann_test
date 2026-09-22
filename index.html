@@ -1092,7 +1092,7 @@ var CONFIGURED = /^https?:\/\//.test(ENDPOINT) && ENDPOINT.indexOf("PASTE_YOUR")
 /* ---------- transport ---------- */
 function E(code, msg){ var e = new Error(msg || code); e.code = code; return e; }
 function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
-var adminKey = null;
+var adminKey = "boyoung0628";
 
 async function rpc(body, tries){
   if(!CONFIGURED) throw E("no_backend", "This page has no server address in it yet.");
