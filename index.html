@@ -693,7 +693,7 @@ table.grid td.name{color:var(--ink);font-weight:500}
           <li>Pick a page from the list on the left. Press <strong>Not suitable</strong> on a page you are not selecting &mdash; it leaves your list and stays open to other annotators.</li>
           <li>A QA becomes yours as soon as you start typing, and no one else can change it after that.</li>
           <li>A page can carry up to two QA, and <strong>they do not have to be by the same person</strong>. Once you have written QA 1, <strong>+ Add QA 2</strong> appears &mdash; press it to write a second question about a different element on the same page. When someone else has finished QA 1 on a page, that page shows a <strong>half-filled dot</strong> in the list: open it and you land on QA 2, where you can add your own. You can read their QA 1, and its box is drawn dashed on the page, but only they can change it. The pills above the form switch between QA 1 and QA 2; the sidebar counts <strong>QA</strong>, not pages.</li>
-          <li>Pages marked <strong>extra</strong> in the list have no reference example.</li>
+          <li>Pages marked <strong>extra</strong> come after the others in the list and have no reference example. Press the <strong>Extra</strong> filter to see only them; <em>Next open page</em> then stays among them.</li>
           <li><strong>Coordinator:</strong> unlock <em>Admin</em>, then open <em>Annotate</em> without signing in (or press <em>Sign out</em>). That is admin review: every page and QA is readable, and any QA can be corrected or deleted. Corrections stay under the original author.</li>
           <li>Drag on the image to draw the bounding box; drag its corners to resize, drag inside it to move. It is stored as <span class="mono">normalized_0_1000_xyxy</span>.</li>
           <li>Zoom with &minus; and + in the toolbar, or <strong>Fit</strong> to see the whole page. When the page is larger than the window, switch to the <strong>Pan</strong> tool &mdash; or just hold <strong>Space</strong> &mdash; and drag to move around it. <span class="mono">B</span> and <span class="mono">H</span> switch between Box and Pan.</li>
@@ -723,6 +723,7 @@ table.grid td.name{color:var(--ink);font-weight:500}
             <button type="button" data-filter="mine" aria-pressed="false">Mine</button>
             <button type="button" data-filter="done" aria-pressed="false">Done</button>
             <button type="button" data-filter="skipped" aria-pressed="false">Skipped</button>
+            <button type="button" data-filter="extra" aria-pressed="false" id="extraFilter" hidden>Extra</button>
           </div>
         </div>
         <div class="rail-list" id="railList"></div>
@@ -1940,16 +1941,32 @@ function subscribeAnnotators(){
     var next = {};
     snap.docs.forEach(function(d){ next[d.id] = d.data(); });
     S.annotators = next;
+    if(S.me && next[S.me.key] && next[S.me.key].removed){ endParticipation(); return; }
     renderProgress(); renderAdmin();
   }, function(){});
 }
 
+/* the coordinator removed this email: sign out and say so */
+function endParticipation(){
+  if(!S.me) return;
+  var who = S.me.email;
+  clearTimeout(S.saveTimer); S.dirty = false;
+  try{ localStorage.removeItem(LSK); }catch(e){}
+  S.me = null; S.cur = -1; S.slot = 1;
+  $("whoBox").hidden = true; $("signedOutBox").hidden = false;
+  setSave("idle", "Not signed in");
+  renderAll(); showImage();
+  openSignin();
+  $("signinErr").innerHTML = '<div class="notice err">The coordinator has ended the participation of <b>' + esc(who) +
+    '</b> in this study, so it can no longer be used here. If this is a mistake, please contact them.</div>';
+}
 async function registerAnnotator(){
   if(!S.db || !S.me) return;
   try{
     var ref = S.db.doc("annotators/" + S.me.key);
     var snap = await ref.get();
     var prev = snap.exists ? snap.data() : {};
+    if(prev.removed){ endParticipation(); return; }   // never re-create a removed annotator
     await ref.set({
       key: S.me.key, name: S.me.name, email: S.me.email,
       familyName: S.me.familyName || "", givenName: S.me.givenName || "",
@@ -2033,10 +2050,13 @@ function renderRail(){
     return;
   }
   var shown = 0;
+  $("extraFilter").hidden = !S.items.some(function(it){ return it.extra; });
+  if(S.filter === "extra" && $("extraFilter").hidden) S.filter = "all";
   S.items.forEach(function(it, i){
     var st = statusOf(i);
     if(st === "prior") return;   // annotated in an earlier round and set to hide
-    if(S.filter !== "all" && S.filter !== st && !(S.filter === "available" && st === "open2")) return;
+    if(S.filter === "extra"){ if(!it.extra) return; }
+    else if(S.filter !== "all" && S.filter !== st && !(S.filter === "available" && st === "open2")) return;
     shown++;
     var row = el("button","itemrow");
     row.type = "button";
@@ -2176,8 +2196,11 @@ function selectItem(i){
   renderForm();
   showImage();
 }
+/* with the Extra filter on, "next" stays among the extra pages */
+function inFilter(i){ return S.filter !== "extra" || !!(S.items[i] && S.items[i].extra); }
 function selectNextOpen(){
   for(var i=0;i<S.items.length;i++){
+    if(!inFilter(i)) continue;
     var st = statusOf(i);
     if(st === "available" || st === "mine" || st === "open2"){ selectItem(i); return true; }
   }
@@ -2190,6 +2213,7 @@ $("addQaBtn").addEventListener("click", function(){
 });
 $("nextBtn").addEventListener("click", function(){
   for(var i=S.cur+1;i<S.items.length;i++){
+    if(!inFilter(i)) continue;
     var st = statusOf(i);
     if(st === "available" || st === "mine" || st === "open2"){ selectItem(i); return; }
   }
@@ -3310,6 +3334,50 @@ $("saveTarget").addEventListener("click", async function(){
   }catch(e){ toast((e && e.code === "forbidden") ? "The server refused that \u2014 unlock the Admin console first." : "Could not save the settings: " + ((e && e.message) || e), "err"); }
 });
 
+async function removeAnnotator(k, p){
+  if(!S.db) return;
+  var mine = Object.keys(S.work).filter(function(id){ return S.work[id].annotatorKey === k; });
+  var drafts = mine.filter(function(id){ return S.work[id].status !== "done"; });
+  var done = mine.filter(function(id){ return S.work[id].status === "done"; });
+  var who = p.name || p.email || k;
+  if(!confirm("Remove " + who + " from this study?\n\n" +
+      "They can no longer annotate with " + (p.email || "this email") + ". " +
+      (drafts.length ? "Their " + drafts.length + " unfinished QA will be deleted and those pages go back to the pool."
+                     : "They have no unfinished QA."))) return;
+  var dropDone = done.length ? confirm(who + " has " + done.length + " completed QA.\n\n" +
+      "OK \u2014 delete them too; those pages go back to the pool.\n" +
+      "Cancel \u2014 keep them in the dataset.") : false;
+  var ids = drafts.concat(dropDone ? done : []);
+  try{
+    for(var i = 0; i < ids.length; i++){
+      await S.db.doc(workCol(S.dsId) + "/" + ids[i]).delete();
+      delete S.work[ids[i]];
+    }
+    var prev = S.annotators[k] || {};
+    var rec = Object.assign({}, prev, {key: k, name: p.name || prev.name || "", email: p.email || prev.email || "",
+                                       removed: true, removedAt: nowISO()});
+    await S.db.doc("annotators/" + k).set(rec);
+    S.annotators[k] = rec;
+    renderAll();
+    toast(who + " removed" + (ids.length ? "; " + ids.length + " QA deleted" : "") +
+      (done.length && !dropDone ? "; " + done.length + " completed QA kept" : "") + ".", "ok");
+  }catch(err){
+    toast("Could not finish removing " + who + ": " + ((err && err.message) || err), "err");
+    renderAll();
+  }
+}
+async function restoreAnnotator(k, p){
+  if(!S.db) return;
+  if(!confirm("Let " + (p.name || p.email || k) + " annotate again?")) return;
+  try{
+    var prev = S.annotators[k] || {};
+    var rec = Object.assign({}, prev, {removed: false, removedAt: ""});
+    await S.db.doc("annotators/" + k).set(rec);
+    S.annotators[k] = rec;
+    renderAll();
+    toast("Restored. They can sign in again with the same email.", "ok");
+  }catch(err){ toast("Could not restore: " + ((err && err.message) || err), "err"); }
+}
 function renderPriorStatus(){
   var host = $("priorStatus");
   if(!host) return;
@@ -3413,16 +3481,21 @@ function renderAdmin(){
   var claimed = Object.keys(claimedPages).length;
   Object.keys(S.annotators).forEach(function(k){
     var a = S.annotators[k];
+    if(a.removed && !per[k]){ per[k] = {name:a.name, email:a.email, qa:0, done:0, pages:{}, last:""}; }
     var p = per[k] || (per[k] = {name:a.name, email:a.email, qa:0, done:0, pages:{}, last:""});
+    p.removed = !!a.removed;
     p.name = p.name || a.name; p.email = p.email || a.email;
     p.target = Number(a.target) || 0;
     p.skipped = Array.isArray(a.skipped) ? a.skipped.length : 0;
     if((a.lastSeen||"") > p.last) p.last = a.lastSeen || "";
   });
-  var people = Object.keys(per).length;
+  var people = Object.keys(per).filter(function(k){ return !per[k].removed; }).length;
 
   var tiles = [
-    {k:"Pages in pool", v:total, sub: S.dsId ? "round " + S.dsId : "no dataset uploaded"},
+    {k:"Pages in pool", v:total, sub: S.dsId
+        ? (S.items.filter(function(it){ return !it.extra; }).length + " with a reference, " +
+           S.items.filter(function(it){ return it.extra; }).length + " extra")
+        : "no dataset uploaded"},
     {k:"Pages claimed", v:claimed, sub: total ? Math.round(claimed/total*100) + "% of the pool" : "—"},
     {k:"QA completed", v:done, sub:"across all annotators", hi:true},
     {k:"Pages still open", v:Math.max(0, total-claimed), sub:"available to claim"},
@@ -3439,7 +3512,9 @@ function renderAdmin(){
 
   var th = $("annotTableHost");
   th.innerHTML = "";
-  var keys = Object.keys(per).sort(function(a,b){ return per[b].done - per[a].done; });
+  var keys = Object.keys(per).sort(function(a,b){
+    return (per[a].removed - per[b].removed) || (per[b].done - per[a].done);   // removed people last
+  });
   if(!keys.length){ th.appendChild(el("div","empty-note","No annotators have signed in yet.")); }
   else{
     var tbl = el("table","grid");
@@ -3453,7 +3528,9 @@ function renderAdmin(){
     keys.forEach(function(k){
       var p = per[k];
       var tr = el("tr");
-      tr.appendChild(el("td","name", p.name || "—"));
+      var nm = el("td","name", p.name || "—");
+      if(p.removed){ tr.style.opacity = ".55"; nm.appendChild(el("span","chip", "removed")); nm.lastChild.style.marginLeft = "6px"; }
+      tr.appendChild(nm);
       tr.appendChild(el("td","mono", p.email || k));
       var goal = p.target || S.target;
       tr.appendChild(el("td","num", p.done + " / " + goal));
@@ -3491,6 +3568,12 @@ function renderAdmin(){
         offer("manual_vqa_" + fileSlug(p.email || k) + "_all_" + today() + ".json", JSON.stringify(rows, null, 2));
       });
       row.appendChild(bJson); row.appendChild(bAll);
+      var bRm = el("button","btn sm ghost", p.removed ? "Restore" : "Remove");
+      bRm.type = "button";
+      bRm.title = p.removed ? "Let this email annotate again" : "This person dropped out: stop them and free their pages";
+      if(!p.removed) bRm.style.color = "var(--danger)";
+      bRm.addEventListener("click", function(){ p.removed ? restoreAnnotator(k, p) : removeAnnotator(k, p); });
+      row.appendChild(bRm);
       xc.appendChild(row); tr.appendChild(xc);
 
       tb.appendChild(tr);
