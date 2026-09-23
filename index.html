@@ -386,6 +386,17 @@ main{flex:1;min-height:0;position:relative}
 }
 .worked-fields dd.note{color:var(--ink-3);font-size:12.6px;margin-top:3px}
 @media (max-width:860px){ .worked{grid-template-columns:1fr} }
+.dodont{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.dodont > div{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);padding:10px 12px;
+  display:flex;flex-direction:column;gap:5px;font-size:13.2px;color:var(--ink-2);line-height:1.5
+}
+.dodont .do b{color:var(--ok)}
+.dodont .dont b{color:var(--danger)}
+@media (max-width:860px){ .dodont{grid-template-columns:1fr} }
+.guide-sec h3{
+  font-size:14.5px;margin:22px 0 8px;color:var(--ink);letter-spacing:-.01em
+}
 .marklist li::before{
   content:counter(mk);position:absolute;left:0;top:1px;width:20px;height:20px;border-radius:999px;
   background:var(--accent);color:#fff;font-size:11.5px;font-weight:700;line-height:20px;text-align:center
@@ -663,29 +674,31 @@ table.grid td.name{color:var(--ink);font-weight:500}
         </div>
       </div>
 
-      <section class="scenario" aria-labelledby="scenarioTitle">
-        <span class="eyebrow">Read this first</span>
-        <h2 id="scenarioTitle">The situation behind every question</h2>
-        <p class="big">Someone is <b>using the electronic product right now</b> and a question comes up. They look at the device &mdash; a button, an icon, a light, a part &mdash; and ask about it. Write every question the way that person would ask it.</p>
+      <section class="guide-sec">
+        <h2>1 &middot; Why this data is being made</h2>
         <ul>
-          <li>Describe the target as it appears <b>on the product</b>: its shape, colour, icon, and where it sits on the device.</li>
-          <li><b>Never point to a place on the manual page.</b> The person asking has not seen the manual &mdash; finding that page is the system's job.</li>
+          <li>You are helping to build a dataset for research on <strong>multimodal document retrieval and question answering</strong> &mdash; systems that have to find the right page among many manuals and then read it to answer.</li>
+          <li>The results will be published as an <strong>academic paper</strong>.</li>
+          <li>The dataset itself is planned for <strong>public release</strong>, so the QA you write may be used by other researchers.</li>
+          <li>Your name and email are used only to keep track of your own work while the study runs. <strong>They are not included in the public dataset.</strong></li>
         </ul>
-        <div class="dodont">
-          <div class="do"><b>&#10003; Allowed</b><span>&ldquo;On the Hyundai Sonata 2026, what does the round button just left of the centre screen do?&rdquo;</span></div>
-          <div class="dont"><b>&#10007; Not allowed</b><span>&ldquo;What is the part in the figure at the top-left of the manual?&rdquo; &middot; &ldquo;&hellip;in the bottom-right picture?&rdquo;</span></div>
-        </div>
       </section>
 
       <section class="guide-sec">
-        <h2>What are you creating?</h2>
-        <p class="big">You are writing <b>question-and-answer pairs (QA)</b> from pages of electronic product manuals. The <b>question</b> describes something a person can <b>see</b> on the product. The <b>answer</b> comes from the <b>text</b> printed on that page.</p>
-        <p>Imagine someone using the product right now. They notice a button, an icon, a light or a part, they do not know what it is for, and they describe what they see and ask. Your job is to write that question, answer it from the page, and mark the two pieces of evidence &mdash; the text that answers it, and the element in the picture.</p>
-        <p class="rule"><b>The one rule everything follows:</b> the question describes what the user can <b>see</b>; the answer comes from what the page <b>says</b>.</p>
+        <h2>2 &middot; The scenario this dataset assumes</h2>
+        <p class="big">Someone is using an electronic product and notices something on it &mdash; a button, an icon, a light, a part. They do not know what it is or what it does, so they describe <b>what they see</b> and ask.</p>
+        <p>A system then has to do the rest: find the right manual among many, find the page that shows that element, work out which element is meant, read the text beside it, and answer. Every QA you write is one test of exactly that.</p>
+        <ol class="process">
+          <li><span class="n">1</span><span><b>Brand &amp; model</b> &rarr; find the relevant manual</span></li>
+          <li><span class="n">2</span><span><b>Visual description</b> &rarr; find the relevant page</span></li>
+          <li><span class="n">3</span><span><b>Identify the target visually</b></span></li>
+          <li><span class="n">4</span><span><b>Read the associated text</b> &rarr; answer</span></li>
+        </ol>
+        <p class="rule">Put briefly: the <b>question</b> describes what the user can <b>see</b> on the product; the <b>answer</b> comes from what the page <b>says</b>.</p>
       </section>
 
       <section class="guide-sec">
-        <h2>One finished example</h2>
+        <h2>3 &middot; One finished example</h2>
         <div class="worked">
           <div class="worked-fig">
             <svg class="sketch" viewBox="0 0 380 336" role="img" aria-label="A redrawn detail of a manual page: a row of control pictures with one button boxed, and numbered steps with one sentence highlighted">
@@ -743,10 +756,36 @@ table.grid td.name{color:var(--ink);font-weight:500}
           </dl>
         </div>
         <p class="rule">Notice what the question does <b>not</b> say: it never calls the button a <i>defroster</i>. That word is the answer. If it appeared in the question, a system could find the page by searching for the word instead of by looking at the picture.</p>
+
       </section>
 
       <section class="guide-sec">
-        <h2>How to annotate, step by step</h2>
+        <h2>4 &middot; What you have to write</h2>
+        <p>One QA is finished when all five parts are filled in. Each has its own job:</p>
+        <ul>
+          <li><strong>Question</strong> &mdash; what the user asks. It carries the brand and model, and describes the target by sight alone. This is what sends the system looking.</li>
+          <li><strong>Answer</strong> &mdash; one short sentence, taken from the text on that page.</li>
+          <li><strong>Text evidence</strong> &mdash; the sentence on the page that supports the answer, copied word for word. It shows the answer came from the page and not from your own knowledge.</li>
+          <li><strong>Image evidence</strong> &mdash; a few words describing what the target looks like, without naming it.</li>
+          <li><strong>Bounding box</strong> &mdash; a box drawn around that one element on the page image. It records which element the system had to find.</li>
+        </ul>
+      </section>
+
+      <section class="guide-sec">
+        <h2>5 &middot; The situation behind every question</h2>
+        <p class="big">You are looking at the manual. <b>The person asking is not.</b> They have the product in front of them, and finding the page is the system&rsquo;s job.</p>
+        <ul>
+          <li>Describe the target as it appears <b>on the product</b>: its shape, colour, icon, and where it sits on the device.</li>
+          <li><b>Never point to a place on the manual page</b> &mdash; no figures, no pictures, no top-left or bottom-right of the page.</li>
+        </ul>
+        <div class="dodont">
+          <div class="dont"><b>&#10007; A place on the manual page</b><span>&ldquo;the part in the figure at the top-left&rdquo; &middot; &ldquo;in the bottom-right picture&rdquo;</span></div>
+          <div class="do"><b>&#10003; A place on the product</b><span>&ldquo;the round button just left of the centre screen&rdquo;</span></div>
+        </div>
+      </section>
+
+      <section class="guide-sec">
+        <h2>6 &middot; How to annotate, step by step</h2>
         <ol class="steps">
           <li><b>Choose a suitable page.</b> You need a page that shows a clearly identifiable button, icon, component or part, <i>and</i> text on the same page explaining what it does. If a page has neither, move on: press <em>Not suitable</em>.</li>
           <li><b>Write the question.</b> Name the brand and model, then describe the target by its <b>look</b> &mdash; shape, colour, icon, and where it sits on the product. Do not name it and do not say what it does.</li>
@@ -754,11 +793,8 @@ table.grid td.name{color:var(--ink);font-weight:500}
           <li><b>Copy the text evidence.</b> The sentence or phrase on the page that supports your answer, copied as printed. This is what proves the answer came from the page rather than from your own knowledge.</li>
           <li><b>Mark the image evidence.</b> Describe the element in a few words without naming it, then drag a box around that element on the page image.</li>
         </ol>
-        <p class="rule">Each part has a job: the <b>question</b> sends the system looking, the <b>box</b> says which element it had to find, the <b>text evidence</b> says where the answer came from, and the <b>answer</b> is what the user wanted.</p>
-      </section>
 
-      <section class="guide-sec">
-        <h2>Rules for the question</h2>
+        <h3>Rules for the question</h3>
         <p>Every question must contain the <b>brand and model</b>, so the right manual can be found among all of them. Apart from that, describe the target using <b>only what can be seen</b>:</p>
         <ul>
           <li>appearance or shape</li>
@@ -773,22 +809,10 @@ table.grid td.name{color:var(--ink);font-weight:500}
           <div class="do"><b>&#10003; Describes the target</b><span>&ldquo;What does the rectangular button with a curved screen icon and three wavy arrows do?&rdquo;</span></div>
         </div>
         <p class="rule">Asking <b>what it does</b> is exactly right. What must not appear is the <b>name</b> of the thing or of its function &mdash; that is the answer.</p>
-        <div class="dodont">
-          <div class="dont"><b>&#10007; A place on the manual page</b><span>&ldquo;the part in the figure at the top-left&rdquo; &middot; &ldquo;in the bottom-right picture&rdquo;</span></div>
-          <div class="do"><b>&#10003; A place on the product</b><span>&ldquo;the round button just left of the centre screen&rdquo;</span></div>
-        </div>
-        <p class="rule">You are looking at the manual; the person asking is not. They have the product in front of them, and finding the page is the system&rsquo;s job.</p>
-        <p>Written this way, a question can only be answered by going through all four steps:</p>
-        <ol class="process">
-          <li><span class="n">1</span><span><b>Brand &amp; model</b> &rarr; find the relevant manual</span></li>
-          <li><span class="n">2</span><span><b>Visual description</b> &rarr; find the relevant page</span></li>
-          <li><span class="n">3</span><span><b>Identify the target visually</b></span></li>
-          <li><span class="n">4</span><span><b>Read the associated text</b> &rarr; answer</span></li>
-        </ol>
       </section>
 
       <section class="guide-sec">
-        <h2>Choosing pages</h2>
+        <h2>7 &middot; Choosing pages</h2>
         <ul>
           <li>Pages come from one shared pool, first come first served. Go through it and keep the pages that suit the task; pass over the rest with <em>Not suitable</em>. You do not have to use every page you open.</li>
           <li><b>A page suits the task</b> when it shows an element you can describe by sight alone, and says in text what that element does.</li>
@@ -799,7 +823,7 @@ table.grid td.name{color:var(--ink);font-weight:500}
       </section>
 
       <section class="guide-sec">
-        <h2>What to hand in</h2>
+        <h2>8 &middot; What to hand in</h2>
         <ul>
           <li><b>50 or 100 completed QA</b> &mdash; you choose which when you sign in, and can change it later with <em>Switch</em>. The counter in the top left follows the goal you chose.</li>
           <li>A QA counts once it is <b>marked complete</b>, which needs all five parts: question, answer, text evidence, image evidence, and the box.</li>
@@ -807,15 +831,6 @@ table.grid td.name{color:var(--ink);font-weight:500}
         </ul>
       </section>
 
-      <section class="guide-sec">
-        <h2>Background &mdash; what the data is for</h2>
-        <ul>
-          <li><b>Query:</b> a textual user query.</li>
-          <li><b>Database:</b> manual PDF page images from many brands and products.</li>
-          <li><b>Goal:</b> retrieve the relevant manual page and answer the query using both the picture and the text.</li>
-        </ul>
-        <p>Your QA are the test of that: each one is a query whose page can only be found by looking, and whose answer can only be given by reading.</p>
-      </section>
     </div>
   </section>
 
@@ -1164,6 +1179,7 @@ table.grid td.name{color:var(--ink);font-weight:500}
           <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center">
             <button class="btn" type="button" id="priorBtn">Load earlier results (JSON)</button>
             <button class="btn ghost" type="button" id="priorClear" hidden>Clear</button>
+            <button class="btn ghost" type="button" id="reloadAll">Reload everything from the sheet</button>
           </div>
           <input type="file" id="priorInput" accept=".json,application/json" multiple hidden>
           <div id="priorStatus"></div>
@@ -1405,7 +1421,8 @@ var box = (function(){
   }
   return {
     get: function(k){ return run("readonly",   function(st){ return st.get(k); }); },
-    put: function(k, v){ return run("readwrite", function(st){ return st.put(v, k); }); }
+    put: function(k, v){ return run("readwrite", function(st){ return st.put(v, k); }); },
+    clear: function(){ return run("readwrite", function(st){ return st.clear(); }); }
   };
 })();
 var SCOPE = "@" + ENDPOINT.slice(-24);
@@ -1593,7 +1610,8 @@ var db = {
     });
   },
   ping: function(){ return rpc({op:"ping"}, 2); },
-  refresh: function(){ fastUntil = Date.now() + 120000; nudge(0); }
+  refresh: function(){ fastUntil = Date.now() + 120000; nudge(0); },
+  clearCache: function(){ cursors = {}; store = {}; return Promise.resolve(box.clear()); }
 };
 
 var downloads = {
@@ -1618,6 +1636,8 @@ return {
   configured: CONFIGURED,
   endpoint: ENDPOINT,
   refresh: function(){ db.refresh(); },
+  /* forget the cached pool and earlier results, then read them again from the sheet */
+  clearCache: function(){ return db.clearCache(); },
   setAdminKey: function(k){ adminKey = k || null; },
   checkAdmin: function(k){
     return rpc({op:"checkAdmin", adminKey: k}).then(function(out){
@@ -2107,6 +2127,9 @@ function capReached(){ return S.pagesCap > 0 && myPageCount() >= S.pagesCap; }
       loadPrior().then(function(){ renderAll(); });
     }
   }, function(){});
+  /* earlier results used to be fetched only when config carried a newer version stamp:
+     if that stamp was lost (a reset, an older build) the rows sat in the sheet unread */
+  try{ await loadPrior(); }catch(e){}
   if(S.me) registerAnnotator();
   S.loadedOnce = true;
   renderAll();
@@ -3664,6 +3687,28 @@ function renderPriorStatus(){
     '<br>Open <b>Annotate</b> while the console is unlocked to read any of them on the page they belong to.</span></div>';
 }
 $("priorBtn").addEventListener("click", function(){ $("priorInput").click(); });
+/* the sheet is the truth: throw away what this browser cached and read it again */
+$("reloadAll").addEventListener("click", async function(){
+  if(!S.db){ toast("Not connected to a server.", "err"); return; }
+  var b = $("reloadAll"); b.disabled = true;
+  try{
+    if(MVQA.clearCache) await MVQA.clearCache();
+    var snap = await S.db.doc("config/app").get();
+    var c = snap.exists ? snap.data() : {};
+    applyConfig(c);
+    S.dsId = c.dsId || null;
+    S.items = []; S.chunkCount = 0; S.cur = -1;
+    if(S.dsId) await loadPool();
+    S.priorVersion = Number(c.priorVersion) || 0;
+    await loadPrior();
+    subscribeWork();
+    renderAll(); showImage();
+    toast("Reloaded: " + S.items.length + " pages, " + S.prior.length + " earlier QA.", "ok");
+  }catch(e){
+    toast("Could not reload: " + ((e && e.message) || e), "err");
+  }
+  b.disabled = false;
+});
 $("priorInput").addEventListener("change", function(e){
   var fl = Array.prototype.slice.call(e.target.files); e.target.value = "";
   if(fl.length) ingestPrior(fl);
