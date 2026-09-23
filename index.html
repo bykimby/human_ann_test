@@ -1180,6 +1180,7 @@ table.grid td.name{color:var(--ink);font-weight:500}
             <button class="btn" type="button" id="priorBtn">Load earlier results (JSON)</button>
             <button class="btn ghost" type="button" id="priorClear" hidden>Clear</button>
             <button class="btn ghost" type="button" id="reloadAll">Reload everything from the sheet</button>
+            <button class="btn ghost" type="button" id="adoptOld">Bring earlier-round work into this round</button>
           </div>
           <input type="file" id="priorInput" accept=".json,application/json" multiple hidden>
           <div id="priorStatus"></div>
@@ -3687,6 +3688,81 @@ function renderPriorStatus(){
     '<br>Open <b>Annotate</b> while the console is unlocked to read any of them on the page they belong to.</span></div>';
 }
 $("priorBtn").addEventListener("click", function(){ $("priorInput").click(); });
+/* match old work to this round's pages by gt_image, then write it here under its own author */
+$("adoptOld").addEventListener("click", async function(){
+  if(!S.db || !S.dsId){ toast("Upload a dataset first.", "err"); return; }
+  var host = $("priorStatus");
+  function say(kind, icon, html){ host.innerHTML = '<div class="notice ' + kind + '"><span>' + icon + '</span><span>' + html + '</span></div>'; }
+  var btn = $("adoptOld"); btn.disabled = true;
+  try{
+    say("info", "&#8987;", "Looking through the earlier rounds&hellip;");
+    var rounds = (await knownRounds()).filter(function(r){ return r !== S.dsId; });
+    var byImg = {};
+    S.items.forEach(function(it, i){ byImg[normImg(it.gt_image)] = i; });
+    var found = [], missing = 0;
+    for(var r = 0; r < rounds.length; r++){
+      var snap = await S.db.collection(workCol(rounds[r])).get();
+      snap.docs.forEach(function(d){
+        var w = d.data();
+        if(!w || !w.annotatorKey || isBlank(w)) return;
+        var idx = byImg[normImg(w.gtImage || "")];
+        if(idx == null){ missing++; return; }
+        found.push({from: rounds[r], w: w, idx: idx});
+      });
+    }
+    if(!found.length){
+      say("warn", "&#9888;", "No annotations from an earlier round match a page in this round" +
+        (missing ? " (" + missing + " were on pages this round does not contain)" : "") + ".");
+      btn.disabled = false; return;
+    }
+    var clash = 0, already = 0, plan = [];
+    found.forEach(function(f){
+      /* already carried across once: same page, same author, same question */
+      var here = slotsOf(f.idx).some(function(x){
+        return x.w.annotatorKey === f.w.annotatorKey && (x.w.question || "") === (f.w.question || "");
+      });
+      if(here){ already++; return; }
+      for(var slot = 1; slot <= S.maxPerPage; slot++){
+        var id = workId(f.idx, slot);
+        if(S.work[id] || plan.some(function(p){ return p.id === id; })) continue;
+        plan.push({id: id, idx: f.idx, slot: slot, w: f.w});
+        return;
+      }
+      clash++;
+    });
+    if(!plan.length){
+      say("info", "&#10003;", "Nothing new to bring across" +
+        (already ? " &mdash; " + already + " " + (already === 1 ? "is" : "are") + " already in this round" : "") +
+        (clash ? "; " + clash + " had no free QA slot" : "") + ".");
+      btn.disabled = false; return;
+    }
+    if(!confirm("Bring " + plan.length + " annotation" + (plan.length === 1 ? "" : "s") +
+        " from " + rounds.length + " earlier round" + (rounds.length === 1 ? "" : "s") + " into this one?\n\n" +
+        "They keep their author, their text and their box, and are matched to pages by image file name." +
+        (clash ? "\n\n" + clash + " cannot be placed: those pages are already full in this round." : ""))) {
+      renderPriorStatus(); btn.disabled = false; return;
+    }
+    var done = 0;
+    for(var i = 0; i < plan.length; i++){
+      var p = plan[i];
+      var body = Object.assign({}, p.w, {idx: p.idx, slot: p.slot, movedFrom: p.w.idx != null ? String(p.w.idx) : "",
+                                         updatedAt: p.w.updatedAt || nowISO()});
+      await S.db.doc(workCol(S.dsId) + "/" + p.id).set(body);
+      S.work[p.id] = body;
+      done++;
+      if(done % 10 === 0) say("info", "&#8987;", "Bringing them across&hellip; " + done + " / " + plan.length);
+    }
+    renderAll();
+    say("info", "&#10003;", "<b>" + done + " annotation" + (done === 1 ? "" : "s") + "</b> brought into this round" +
+      (missing ? "; " + missing + " were on pages this round does not contain" : "") +
+      (already ? "; " + already + " were already here" : "") +
+      (clash ? "; " + clash + " had no free QA slot" : "") + ".");
+    toast("Earlier-round work is now part of this round.", "ok");
+  }catch(err){
+    say("err", "&#9888;", esc((err && err.message) || String(err)));
+  }
+  btn.disabled = false;
+});
 /* the sheet is the truth: throw away what this browser cached and read it again */
 $("reloadAll").addEventListener("click", async function(){
   if(!S.db){ toast("Not connected to a server.", "err"); return; }
