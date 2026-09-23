@@ -1983,8 +1983,15 @@ function mySkips(){
 }
 
 /* ============================ item status ============================ */
+/* span-less extra pages already in a round (uploaded before they were filtered) are hidden,
+   unless someone has already started on one */
+function isEmptyExtra(idx){
+  var it = S.items[idx];
+  return !!(it && it.extra && !(it.gt_page_ambiguous_spans || []).length && !hasCurrentWork(idx));
+}
 function statusOf(idx){
   if(isPriorHidden(idx)) return "prior";
+  if(isEmptyExtra(idx)) return "hidden";
   var list = slotsOf(idx), k = myKey();
   var mine = k ? list.filter(function(x){ return x.w.annotatorKey === k; }) : [];
   if(mine.length) return mine.every(function(x){ return x.w.status === "done"; }) ? "done" : "mine";
@@ -1994,7 +2001,7 @@ function statusOf(idx){
   return joinable(idx) ? "open2" : "taken";
 }
 var STATUS_LABEL = {available:"Open", mine:"In progress", done:"Completed", taken:"Taken", skipped:"Skipped",
-                    open2:"Room for another QA", prior:"Done in an earlier round"};
+                    open2:"Room for another QA", prior:"Done in an earlier round", hidden:"Hidden"};
 
 /* ============================ rail ============================ */
 function isNarrow(){ return window.innerWidth <= 1240 && window.innerWidth > 900; }
@@ -2050,11 +2057,11 @@ function renderRail(){
     return;
   }
   var shown = 0;
-  $("extraFilter").hidden = !S.items.some(function(it){ return it.extra; });
+  $("extraFilter").hidden = !S.items.some(function(it, i){ return it.extra && !isEmptyExtra(i); });
   if(S.filter === "extra" && $("extraFilter").hidden) S.filter = "all";
   S.items.forEach(function(it, i){
     var st = statusOf(i);
-    if(st === "prior") return;   // annotated in an earlier round and set to hide
+    if(st === "prior" || st === "hidden") return;   // earlier round, or an extra page with no spans
     if(S.filter === "extra"){ if(!it.extra) return; }
     else if(S.filter !== "all" && S.filter !== st && !(S.filter === "available" && st === "open2")) return;
     shown++;
@@ -3153,9 +3160,11 @@ $("jsonAppendInput").addEventListener("change", function(e){
 function cleanRecord(o){
   if(!o || typeof o !== "object" || !o.gt_image) return null;
   var ev = o.evidence || {};
+  /* a span may also be given as plain text */
   var spans = Array.isArray(o.gt_page_ambiguous_spans) ? o.gt_page_ambiguous_spans.filter(function(s){
-    return s && typeof s === "object";
+    return s && (typeof s === "object" || (typeof s === "string" && s.trim()));
   }).map(function(s){
+    if(typeof s === "string") s = {ambiguous_span: s.trim()};
     return {
       ambiguous_span: s.ambiguous_span || "", ambiguous_element: s.ambiguous_element || "",
       object: s.object || "", type: s.type || "", reason: s.reason || "", confidence: s.confidence || ""
@@ -3217,7 +3226,7 @@ async function ingestJson(files, mode){
   }
   /* two passes, so a page listed both with and without a reference keeps its reference —
      whichever file was picked first */
-  var seen = {}, bad = 0, dup = 0, withRef = [], extras = [], all = [];
+  var seen = {}, bad = 0, dup = 0, noSpan = 0, withRef = [], extras = [], all = [];
   if(append) S.items.forEach(function(it){ seen[normImg(it.gt_image)] = 1; });
   read.sets.forEach(function(set){
     set.arr.forEach(function(o){
@@ -3230,6 +3239,8 @@ async function ingestJson(files, mode){
       if(rec.extra !== pass) return;
       var key = normImg(rec.gt_image);
       if(seen[key]){ dup++; return; }
+      /* an extra page is only worth annotating for its ambiguous spans */
+      if(pass && !rec.gt_page_ambiguous_spans.length){ noSpan++; return; }
       seen[key] = 1;
       (pass ? extras : withRef).push(rec);
     });
@@ -3237,6 +3248,7 @@ async function ingestJson(files, mode){
   var clean = withRef.concat(extras);   // pages with a reference example first, extra pages after
   var notes = [];
   if(dup) notes.push(dup + " duplicate page" + (dup === 1 ? "" : "s") + " skipped");
+  if(noSpan) notes.push(noSpan + " extra page" + (noSpan === 1 ? "" : "s") + " without ambiguous spans skipped");
   if(bad) notes.push(bad + " record" + (bad === 1 ? "" : "s") + " without gt_image skipped");
   if(read.bad.length) notes.push("unreadable: " + read.bad.join("; "));
   var tail = notes.length ? " (" + esc(notes.join(", ")) + ")" : "";
@@ -3493,8 +3505,11 @@ function renderAdmin(){
 
   var tiles = [
     {k:"Pages in pool", v:total, sub: S.dsId
-        ? (S.items.filter(function(it){ return !it.extra; }).length + " with a reference, " +
-           S.items.filter(function(it){ return it.extra; }).length + " extra")
+        ? (function(){
+            var ref = 0, ex = 0, empty = 0;
+            S.items.forEach(function(it, i){ if(!it.extra) ref++; else if(isEmptyExtra(i)) empty++; else ex++; });
+            return ref + " with a reference, " + ex + " extra" + (empty ? " (" + empty + " without spans hidden)" : "");
+          })()
         : "no dataset uploaded"},
     {k:"Pages claimed", v:claimed, sub: total ? Math.round(claimed/total*100) + "% of the pool" : "—"},
     {k:"QA completed", v:done, sub:"across all annotators", hi:true},
