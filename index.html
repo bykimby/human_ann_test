@@ -932,6 +932,8 @@ table.grid td.name{color:var(--ink);font-weight:500}
         <ul>
           <li>Unlock <strong>Admin</strong>, then open <strong>Annotate</strong> without signing in, or press <em>Sign out</em>. That is admin review: every page and every QA is readable, including earlier rounds and pages hidden from annotators.</li>
           <li>Any QA can be corrected or deleted there. A correction stays under its original author.</li>
+          <li>While the console is unlocked you can also correct other people's QA when signed in as yourself.</li>
+          <li>Earlier-round QA can be corrected but not deleted. The correction is written into the earlier results, so <em>Export everything collected (earlier + this round)</em> includes it.</li>
         </ul>
       </section>
 
@@ -1665,7 +1667,7 @@ var S = {
   dsId: null, target: 50, targets: [50, 100], maxPerPage: 2, pagesCap: 0, slot: 1,
   otherSecond: "done",      // when others may add the next QA: done | any | never
   priorPolicy: "hide",      // pages from earlier rounds: hide | open
-  prior: [], priorByImg: {}, priorWork: {}, priorVersion: 0,
+  prior: [], priorChunks: [], priorByImg: {}, priorWork: {}, priorVersion: 0,
   chunkCount: 0,
   items: [],                // reference examples, index-aligned
   work: {},                 // idx -> work doc
@@ -1726,6 +1728,13 @@ var LSAK = "mvqa.adminkey.v2";   /* LSK is already the identity key */
 function adminUnlockKey(){ return "admin"; }
 /* the administrator, signed in as nobody: reads every QA, corrects or deletes them, writes none */
 function adminReview(){ return !S.me && isAdminUnlocked(); }
+/* the administrator corrects any QA, someone else's or an earlier round's, signed in or not;
+   a signed-in annotator's own QA still save the ordinary way */
+function adminCorrecting(idx, slot){
+  if(!isAdminUnlocked() || idx < 0) return false;
+  var o = slotOwner(idx, slot);
+  return !!(o && (!S.me || o.annotatorKey !== S.me.key));
+}
 function isAdminUnlocked(){
   try{ return sessionStorage.getItem(LSA) === adminUnlockKey(); }catch(e){ return false; }
 }
@@ -2027,6 +2036,9 @@ function rebuildPrior(){
   /* built whatever the policy says: the coordinator reads earlier QA even when
      annotators never see those pages */
   S.priorWork = {};
+  /* where each row is stored, so an admin correction rewrites only its own chunk */
+  var at = new Map();
+  (S.priorChunks || []).forEach(function(c, ci){ c.rows.forEach(function(r, ri){ at.set(r, [ci, ri]); }); });
   S.items.forEach(function(it, i){
     var rows = S.priorByImg[normImg(it.gt_image)];
     if(!rows) return;
@@ -2034,14 +2046,20 @@ function rebuildPrior(){
       var slot = k + 1;
       if(slot > 5) return;
       S.priorWork[workId(i, slot)] = {
-        idx: i, slot: slot, prior: true, status: "done",
+        idx: i, slot: slot, prior: true, status: "done", at: at.get(r) || null,
         annotatorKey: "prior:" + (r.email || r.name || "earlier"),
         annotatorName: r.name || "",
         question: r.query || "", answer: r.answer || "", evidenceText: r.text || "",
-        imageDescription: r.image_description || "", bbox: Array.isArray(r.bbox) ? r.bbox : null
+        imageDescription: r.image_description || "", bbox: Array.isArray(r.bbox) ? r.bbox : null,
+        adminEditedAt: r.adminEditedAt || ""
       };
     });
   });
+}
+function flatPrior(){
+  var rows = [];
+  (S.priorChunks || []).forEach(function(c){ rows = rows.concat(c.rows); });
+  return rows;
 }
 async function loadPrior(){
   if(!S.db){ rebuildPrior(); return; }
@@ -2049,9 +2067,8 @@ async function loadPrior(){
     var snap = await S.db.collection("prior/rows").get();
     var chunks = snap.docs.map(function(d){ return d.data() || {}; })
       .sort(function(a, b){ return (Number(a.n) || 0) - (Number(b.n) || 0); });
-    var rows = [];
-    chunks.forEach(function(c){ rows = rows.concat(c.rows || []); });
-    S.prior = rows;
+    S.priorChunks = chunks.map(function(c){ return {n: Number(c.n) || 0, rows: (c.rows || []).slice()}; });
+    S.prior = flatPrior();
   }catch(e){ /* keep what we had */ }
   rebuildPrior();
 }
@@ -2757,7 +2774,7 @@ function renderSlots(){
       b.type = "button";
       b.setAttribute("aria-pressed", String(slot === S.slot));
       b.setAttribute("data-state", w ? (w.status === "done" ? "done" : "draft") : "empty");
-      if(theirs){ b.setAttribute("data-theirs", "true"); b.title = "Written by " + ownerLabel(w) + " \u2014 read only"; }
+      if(theirs){ b.setAttribute("data-theirs", "true"); b.title = "Written by " + ownerLabel(w) + (isAdminUnlocked() ? " \u2014 you can correct it as admin" : " \u2014 read only"); }
       b.appendChild(el("span","st"));
       b.appendChild(document.createTextNode("QA " + slot + (theirs ? " \u00b7 " + shortOwner(w) : "")));
       b.addEventListener("click", function(){ selectSlot(slot); });
@@ -2923,10 +2940,10 @@ function reflectAdmin(){
   var host = $("claimNotice");
   host.innerHTML = "";
   var so = slotOwner(S.cur, S.slot);
-  var editable = !!(so && !so.prior);
+  var editable = !!so;
   FIELDS.forEach(function(p){ $(p[0]).readOnly = !editable; $(p[0]).style.opacity = editable ? "1" : ".6"; });
   $("completeBtn").hidden = true; $("skipBtn").hidden = true; $("addQaBtn").hidden = true;
-  $("releaseBtn").hidden = !editable;
+  $("releaseBtn").hidden = !(so && !so.prior);   // earlier-round QA can be corrected, not deleted
   $("releaseBtn").textContent = "Delete QA " + S.slot;
   var n = el("div", "notice info");
   n.style.cssText = "flex-wrap:wrap";
@@ -2935,8 +2952,6 @@ function reflectAdmin(){
     html = "<b>Admin review.</b> QA " + S.slot + " by <b>" + esc(ownerLabel(so)) + "</b> (" + (so.status === "done" ? "completed" : "draft") + ")" +
       (so.adminEditedAt ? ", corrected " + esc(fmtTime(so.adminEditedAt)) : "") +
       ". Edits are saved to their QA as a correction; it stays theirs.";
-  }else if(so){
-    html = "<b>Admin review.</b> QA " + S.slot + " comes from an earlier round and cannot be changed here.";
   }else{
     html = "<b>Admin review.</b> There is no QA in this slot. You can read and correct QA, not write new ones &mdash; sign in as an annotator for that.";
   }
@@ -2945,7 +2960,7 @@ function reflectAdmin(){
 }
 function reflectClaim(){
   $("completeBtn").hidden = false; $("skipBtn").hidden = false;
-  if(adminReview()){ reflectAdmin(); return; }
+  if(adminReview() || adminCorrecting(S.cur, S.slot)){ reflectAdmin(); return; }
   var host = $("claimNotice");
   host.innerHTML = "";
   var k = myKey();
@@ -3007,11 +3022,10 @@ function reflectClaim(){
   if(!done) $("completeBtn").textContent = "Mark complete";
 }
 function ensureEditable(){
+  if(adminCorrecting(S.cur, S.slot)) return true;
   if(!S.me){
     if(adminReview()){
-      var ao = slotOwner(S.cur, S.slot);
-      if(ao && !ao.prior) return true;
-      toast(ao ? "Earlier-round QA cannot be changed here." : "In admin review you correct existing QA; there is none in this slot.", null);
+      toast("In admin review you correct existing QA; there is none in this slot.", null);
       return false;
     }
     openSignin(); return false;
@@ -3083,12 +3097,13 @@ function draftKey(idx, slot){
 /* a correction keeps the QA its author's: only the content changes, and it is marked */
 async function adminFlush(){
   clearTimeout(S.saveTimer);
-  if(S.cur < 0 || !adminReview() || !S.db || !S.dsId || !S.dirty) return;
+  if(S.cur < 0 || !adminCorrecting(S.cur, S.slot) || !S.db || !S.dsId || !S.dirty) return;
   var seq = S.editSeq;
-  var d = collect(), docId = workId(d.idx, d.slot), w = S.work[docId];
+  var d = collect(), docId = workId(d.idx, d.slot), w = getWork(d.idx, d.slot);
   if(!w || !w.annotatorKey){ return; }
   if(sameContent(w, d)){ S.dirty = false; setSave("saved", "No changes"); return; }
   var at = nowISO();
+  if(w.prior) return adminFlushPrior(w, d, at, seq);
   var body = Object.assign({}, w, {
     question: d.question, answer: d.answer, evidenceText: d.evidenceText,
     imageDescription: d.imageDescription, bbox: d.bbox, updatedAt: at, adminEditedAt: at
@@ -3102,6 +3117,34 @@ async function adminFlush(){
   }catch(e){
     setSave("offline", "Correction not saved");
     toast("Could not save the correction: " + ((e && e.message) || e), "err");
+  }
+}
+/* an earlier-round QA is a row in the earlier results: rewrite the one chunk that holds it */
+async function adminFlushPrior(w, d, at, seq){
+  var c = w.at && S.priorChunks[w.at[0]], r = c && c.rows[w.at[1]];
+  if(!r){
+    setSave("offline", "Correction not saved");
+    toast("This earlier QA was not found in the stored results. Reload the page and try again.", "err");
+    return;
+  }
+  var fixed = Object.assign({}, r, {
+    query: d.question, answer: d.answer, text: d.evidenceText,
+    image_description: d.imageDescription, bbox: d.bbox, adminEditedAt: at
+  });
+  var rows = c.rows.slice();
+  rows[w.at[1]] = fixed;
+  try{
+    await S.db.doc("prior/rows/c" + c.n).set({n: c.n, rows: rows});
+    c.rows[w.at[1]] = fixed;
+    S.prior = flatPrior();
+    rebuildPrior();
+    if(S.editSeq === seq) S.dirty = false;
+    setSave("saved", "Correction saved " + fmtTime(at));
+    reflectClaim();
+  }catch(e){
+    setSave("offline", "Correction not saved");
+    toast((e && e.code === "forbidden") ? "The server refused that — unlock the Admin console again."
+                                        : "Could not save the correction: " + ((e && e.message) || e), "err");
   }
 }
 function sameContent(w, d){
@@ -3135,11 +3178,14 @@ function wipeCurrent(){
 function queueSave(){
   if(S.cur < 0) return;
   S.dirty = true; S.editSeq = (S.editSeq || 0) + 1;
-  if(!S.me){
-    if(!adminReview()){ openSignin(); return; }
+  if(adminCorrecting(S.cur, S.slot)){
     setSave("saving", "Saving correction\u2026");
     clearTimeout(S.saveTimer);
     S.saveTimer = setTimeout(function(){ adminFlush(); }, 900);
+    return;
+  }
+  if(!S.me){
+    if(!adminReview()) openSignin();
     return;
   }
   var d = collect();
@@ -3155,7 +3201,8 @@ async function flushSave(immediate){
   if(S.cur < 0) return;
   if(!S.dirty) return;                       // nothing typed since this form was shown
   var seq = S.editSeq;
-  if(!S.me){ if(adminReview()) return adminFlush(); return; }
+  if(adminCorrecting(S.cur, S.slot)) return adminFlush();
+  if(!S.me) return;
   var d = collect();
   if(isBlank(d)){ return; }
   /* nothing changed: do not write. Opening and leaving a page must never overwrite the
@@ -3302,6 +3349,7 @@ setInterval(function(){ if(S.pending) flushSave(false); }, 20000);
 
 /* ---- complete / skip / release ---- */
 $("completeBtn").addEventListener("click", async function(){
+  if(adminCorrecting(S.cur, S.slot)) return;   // a correction keeps the author's status
   if(!ensureEditable()) return;
   var c = updateChecklist();
   var missing = Object.keys(c).filter(function(k){ return !c[k]; });
@@ -3370,10 +3418,9 @@ $("skipBtn").addEventListener("click", async function(){
 
 $("releaseBtn").addEventListener("click", async function(){
   if(S.cur < 0) return;
-  if(!S.me){
-    if(!adminReview()) return;
+  if(adminCorrecting(S.cur, S.slot)){
     var ao = slotOwner(S.cur, S.slot), aid = workId(S.cur, S.slot);
-    if(!ao || ao.prior) return;
+    if(ao.prior) return;
     if(!confirm("Delete QA " + S.slot + " by " + ownerLabel(ao) + "?\n\nIt disappears from the dataset for everyone. " +
         "Only the sheet's version history can bring it back.")) return;
     try{ await S.db.doc(workCol(S.dsId) + "/" + aid).delete(); delete S.work[aid]; }
@@ -3383,6 +3430,7 @@ $("releaseBtn").addEventListener("click", async function(){
     toast("QA deleted.", null);
     return;
   }
+  if(!S.me) return;
   var so = slotOwner(S.cur, S.slot);
   if(so && so.annotatorKey !== S.me.key) return;
   var idx = S.cur, slot = S.slot, docId = workId(idx, slot);
@@ -3832,12 +3880,14 @@ async function ingestPrior(files){
 }
 async function storePrior(rows){
   var host = $("priorStatus");
-  if(!S.db){ S.prior = rows; rebuildPrior(); renderAll(); return; }
+  if(!S.db){ S.prior = rows; S.priorChunks = []; rebuildPrior(); renderAll(); return; }
   try{
     host.innerHTML = '<div class="notice info"><span>&#8987;</span><span>Saving&hellip;</span></div>';
     await S.db.deleteCollection("prior/rows");
     var chunks = chunkRecords(rows);
     for(var i = 0; i < chunks.length; i++) await S.db.doc("prior/rows/c" + i).set({n: i, rows: chunks[i]});
+    S.priorChunks = chunks.map(function(c, n){ return {n: n, rows: c}; });
+    rows = flatPrior();
     var snap = await S.db.doc("config/app").get();
     var prev = snap.exists ? snap.data() : {};
     var v = Date.now();
