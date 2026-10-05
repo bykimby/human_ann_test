@@ -3933,6 +3933,17 @@ function renderAdmin(){
     p.skipped = Array.isArray(a.skipped) ? a.skipped.length : 0;
     if((a.lastSeen||"") > p.last) p.last = a.lastSeen || "";
   });
+  /* earlier rounds count too, matched to annotators by email; a row the coordinator emptied
+     out stands for a deleted one (earlier QA cannot be deleted) and is not counted */
+  var earlierDone = 0, cleared = 0;
+  (S.prior || []).forEach(function(r){
+    if(isClearedPrior(r)){ cleared++; return; }
+    earlierDone++;
+    var email = String(r.email || "").trim().toLowerCase();
+    var k = email ? seg(email) : "prior:" + (r.name || "earlier");
+    var p = per[k] || (per[k] = {name:r.name, email:email, qa:0, done:0, pages:{}, last:""});
+    p.earlier = (p.earlier || 0) + 1;
+  });
   var people = Object.keys(per).filter(function(k){ return !per[k].removed; }).length;
 
   var tiles = [
@@ -3944,7 +3955,9 @@ function renderAdmin(){
           })()
         : "no dataset uploaded"},
     {k:"Pages claimed", v:claimed, sub: total ? Math.round(claimed/total*100) + "% of the pool" : "—"},
-    {k:"QA completed", v:done, sub:"across all annotators", hi:true},
+    {k:"QA completed", v:done + earlierDone, hi:true, sub: (earlierDone || cleared)
+        ? (done + " this round + " + earlierDone + " earlier" + (cleared ? " (" + cleared + " emptied, not counted)" : ""))
+        : "across all annotators"},
     {k:"Pages still open", v:Math.max(0, total-claimed), sub:"available to claim"},
     {k:"Annotators", v:people, sub: (S.targets.length > 1 ? S.targets.join(" or ") + " QA, own choice" : S.target + " QA each") + (S.pagesCap ? ", " + S.pagesCap + " pages" : "")}
   ];
@@ -3959,8 +3972,9 @@ function renderAdmin(){
 
   var th = $("annotTableHost");
   th.innerHTML = "";
+  function allDone(p){ return p.done + (p.earlier || 0); }   // this round and earlier ones
   var keys = Object.keys(per).sort(function(a,b){
-    return (per[a].removed - per[b].removed) || (per[b].done - per[a].done);   // removed people last
+    return (!!per[a].removed - !!per[b].removed) || (allDone(per[b]) - allDone(per[a]));   // removed people last
   });
   if(!keys.length){ th.appendChild(el("div","empty-note","No annotators have signed in yet.")); }
   else{
@@ -3979,18 +3993,20 @@ function renderAdmin(){
       if(p.removed){ tr.style.opacity = ".55"; nm.appendChild(el("span","chip", "removed")); nm.lastChild.style.marginLeft = "6px"; }
       tr.appendChild(nm);
       tr.appendChild(el("td","mono", p.email || k));
-      var goal = p.target || S.target;
-      tr.appendChild(el("td","num", p.done + " / " + goal));
+      var goal = p.target || S.target, total = allDone(p);
+      var dc = el("td","num", total + " / " + goal);
+      if(p.earlier) dc.title = p.done + " this round + " + p.earlier + " earlier";
+      tr.appendChild(dc);
       tr.appendChild(el("td","num", String(Math.max(0, p.qa - p.done))));
       tr.appendChild(el("td","num", String(Object.keys(p.pages || {}).length) + (S.pagesCap ? " / " + S.pagesCap : "")));
       tr.appendChild(el("td","num", String(p.skipped || 0)));
       var pc = el("td");
       var wrap = el("div"); wrap.style.cssText="display:flex;align-items:center;gap:8px;min-width:120px";
       var bar = el("div","bar"); bar.style.cssText="flex:1;min-width:64px";
-      var fill = el("i"); fill.style.width = Math.min(100, goal ? p.done/goal*100 : 0) + "%";
+      var fill = el("i"); fill.style.width = Math.min(100, goal ? total/goal*100 : 0) + "%";
       bar.appendChild(fill);
       wrap.appendChild(bar);
-      wrap.appendChild(el("span","tnum", Math.round(goal ? p.done/goal*100 : 0) + "%"));
+      wrap.appendChild(el("span","tnum", Math.round(goal ? total/goal*100 : 0) + "%"));
       pc.appendChild(wrap); tr.appendChild(pc);
       tr.appendChild(el("td",null, fmtTime(p.last)));
 
@@ -4033,11 +4049,16 @@ function renderAdmin(){
 }
 
 /* ---- export ---- */
+/* an earlier QA emptied in admin review: earlier QA cannot be deleted, so a blank one stands for a deleted one */
+function isClearedPrior(r){
+  return !String(r.query || "").trim() && !String(r.answer || "").trim() &&
+         !String(r.text || "").trim() && !String(r.image_description || "").trim();
+}
 /* earlier rounds in the same shape as this round's rows, so one file holds the lot */
 function priorExportRows(){
   var byImg = {};
   S.items.forEach(function(it, i){ byImg[normImg(it.gt_image)] = it; });
-  return (S.prior || []).map(function(r){
+  return (S.prior || []).filter(function(r){ return !isClearedPrior(r); }).map(function(r){
     var it = byImg[normImg(r.gt_image)] || {};
     var base = r.query_id || stemOf(r.gt_image);
     var slot = Number(r.qa_index) || 1;
