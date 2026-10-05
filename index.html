@@ -2942,7 +2942,10 @@ function reflectAdmin(){
   var so = slotOwner(S.cur, S.slot);
   var editable = !!so;
   FIELDS.forEach(function(p){ $(p[0]).readOnly = !editable; $(p[0]).style.opacity = editable ? "1" : ".6"; });
-  $("completeBtn").hidden = true; $("skipBtn").hidden = true; $("addQaBtn").hidden = true;
+  $("completeBtn").hidden = true; $("skipBtn").hidden = true;
+  var nextSlot = canAddSlot();   // signed in, the administrator still adds QA of their own
+  $("addQaBtn").hidden = !nextSlot;
+  if(nextSlot) $("addQaBtn").textContent = "+ Add QA " + nextSlot;
   $("releaseBtn").hidden = !(so && !so.prior);   // earlier-round QA can be corrected, not deleted
   $("releaseBtn").textContent = "Delete QA " + S.slot;
   var n = el("div", "notice info");
