@@ -4085,17 +4085,18 @@ function priorExportRows(){
     };
   });
 }
+/* straight from this round's work documents, as the admin table counts them, so no QA
+   is missed because of how the slots on its page line up */
 function buildExport(onlyDone, onlyKey){
   var out = [];
-  S.items.forEach(function(it, i){
-    slotsOf(i).forEach(function(entry){
-      var w = entry.w;
-      if(!w.annotatorKey || w.prior) return;   // earlier rounds were exported back then
+  Object.keys(S.work).map(function(id){ return S.work[id]; })
+    .filter(function(w){ return w && w.annotatorKey && !w.prior && w.idx != null; })
+    .sort(function(a, b){ return (Number(a.idx) - Number(b.idx)) || ((a.slot || 1) - (b.slot || 1)); })
+    .forEach(function(w){
       if(onlyKey && w.annotatorKey !== onlyKey) return;
       if(onlyDone && w.status !== "done") return;
-      out.push(exportRow(it, i, entry.slot, w));
+      out.push(exportRow(S.items[w.idx] || {}, w.idx, w.slot || 1, w));
     });
-  });
   return out;
 }
 function fileSlug(s){
@@ -4112,7 +4113,7 @@ function exportRow(it, i, slot, w){
       answer: w.answer || "",
       brand: it.brand || "",
       source: it.source || "",
-      gt_image: it.gt_image || "",
+      gt_image: it.gt_image || w.gtImage || "",
       evidence: {
         text: w.evidenceText || "",
         image_description: w.imageDescription || "",
@@ -4144,11 +4145,17 @@ $("exportAll").addEventListener("click", function(){
   offer("manual_vqa_all_" + today() + ".json", JSON.stringify(rows, null, 2));
 });
 $("exportBoth").addEventListener("click", function(){
-  var now = buildExport(true, null).map(function(r){ return Object.assign({}, r, {round: "current"}); });
+  /* everything collected: this round's drafts too (each row carries its status), not empty claims */
+  var now = buildExport(false, null).filter(function(r){
+    return r.query || r.answer || r.evidence.text || r.evidence.image_description || r.evidence.bbox;
+  }).map(function(r){ return Object.assign({}, r, {round: "current"}); });
+  var drafts = now.filter(function(r){ return r.status !== "done"; }).length;
   var rows = priorExportRows().concat(now);
   if(!rows.length){ toast("Nothing to export yet.", "err"); return; }
   offer("manual_vqa_all_rounds_" + today() + ".json", JSON.stringify(rows, null, 2));
-  toast(rows.length + " QA exported (" + (rows.length - now.length) + " earlier, " + now.length + " from this round).", "ok");
+  toast(rows.length + " QA exported (" + (rows.length - now.length) + " earlier, " + now.length + " from this round" +
+    (drafts ? ", " + drafts + " of them drafts" : "") + ")." +
+    (now.length ? "" : " This round (" + (S.dsId || "none") + ") has no QA on the server."), now.length ? "ok" : "err");
 });
 $("exportCsv").addEventListener("click", function(){
   var rows = buildExport(false);
